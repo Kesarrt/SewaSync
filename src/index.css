@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+/* Custom theme colors based on screenshots */
+@theme {
+  --color-brand-navy: #1E293B;
+  --color-brand-navydark: #0F172A;
+  --color-brand-teal: #0D9488;
+  --color-brand-teal-light: #CCFBF1;
+  --color-brand-red: #EF4444;
+  --color-brand-background: #F8FAFC;
+}
+
+body {
+  background-color: var(--color-brand-background);
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color: #334155;
+  margin: 0;
+  padding: 0;
+}
+
+/* Custom pattern utility for the Map Placeholder */
+@utility pattern-grid {
+  background-size: 40px 40px;
+  background-image: linear-gradient(to right, #cbd5e1 1px, transparent 1px),
+                    linear-gradient(to bottom, #cbd5e1 1px, transparent 1px);
+}
