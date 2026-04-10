@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { sendTaskAssignmentEmail } from '../emailService';
 import { CheckSquare, PlusCircle, UserCheck, MapPin, Award, Trash2 } from 'lucide-react';
 
 export default function Tasks() {
@@ -45,16 +46,35 @@ export default function Tasks() {
     setIsSubmitting(true);
     
     try {
+      // Find the selected volunteer to get their email
+      const selectedVol = volunteers.find(v => v.name === formData.assignedTo);
+      const assignedEmail = selectedVol ? selectedVol.email : null;
+
       await addDoc(collection(db, 'tasks'), {
         title: formData.title,
         description: formData.description,
         points: Number(formData.points) || 10, // default 10 points
         location: formData.location,
         assignedTo: formData.assignedTo || 'Unassigned',
+        assignedToEmail: assignedEmail, // Needed for VolunteerTasks query
         status: 'pending', // pending, active, completed
         createdAt: serverTimestamp()
       });
       
+      // Trigger EmailJS notification if a volunteer was assigned
+      if (selectedVol && assignedEmail) {
+        try {
+          await sendTaskAssignmentEmail(
+            assignedEmail,
+            selectedVol.name,
+            formData.title,
+            formData.location
+          );
+        } catch (emailError) {
+          console.error("Failed to send task assignment email:", emailError);
+        }
+      }
+
       // Reset form
       setFormData({ title: '', description: '', points: '', location: '', assignedTo: '' });
     } catch (error) {
