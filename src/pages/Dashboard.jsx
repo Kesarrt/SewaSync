@@ -21,7 +21,8 @@ export default function Dashboard() {
   // CMS State
   const [workTitle, setWorkTitle] = useState('');
   const [workDesc, setWorkDesc] = useState('');
-  const [workImage, setWorkImage] = useState('');
+  const [workFile, setWorkFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [recentWork, setRecentWork] = useState([]);
 
   // 📦 0. Auth State Checker
@@ -113,22 +114,44 @@ const handleApproveVolunteer = async (vol) => {
     }
   };
 
+  // Image Encoding Helper
+  const convertToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const handleAddRecentWork = async (e) => {
     e.preventDefault();
-    if (!workTitle || !workDesc || !workImage) return;
+    if (!workTitle || !workDesc || !workFile) return;
 
     try {
+      setIsUploading(true);
+      
+      // Encode file natively as Base64 string to bypass Firebase Storage costs
+      const base64Image = await convertToBase64(workFile);
+
+      // Save document to Firestore
       await addDoc(collection(db, 'recentWork'), {
         title: workTitle,
         description: workDesc,
-        imageUrl: workImage,
+        imageUrl: base64Image,
         createdAt: serverTimestamp()
       });
+      
       setWorkTitle('');
       setWorkDesc('');
-      setWorkImage('');
+      setWorkFile(null);
+      // reset file input
+      document.getElementById("workImageInput").value = "";
     } catch (err) {
       console.error("Error adding recent work:", err);
+      alert("Failed to publish story. Check console.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -370,14 +393,23 @@ ${messagesPrompt}`
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black tracking-widest uppercase text-slate-400 mb-1">Image URL</label>
+              <label className="block text-[10px] font-black tracking-widest uppercase text-slate-400 mb-1">Local Image File</label>
               <input 
-                required value={workImage} onChange={e => setWorkImage(e.target.value)} 
-                className="w-full bg-theme-base transition-colors duration-300 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-3 outline-none text-sm font-medium transition-all" 
-                placeholder="https://..." 
+                id="workImageInput"
+                type="file" 
+                accept="image/*"
+                required 
+                onChange={e => setWorkFile(e.target.files[0])} 
+                className="w-full bg-theme-base text-theme-text transition-colors duration-300 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-2.5 outline-none text-sm font-medium transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 placeholder:text-slate-400 cursor-pointer" 
               />
             </div>
-            <button type="submit" className="mt-2 bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-colors shadow-md">Publish Story</button>
+            <button 
+              type="submit" 
+              disabled={isUploading}
+              className="mt-2 bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed"
+            >
+              {isUploading ? 'Publishing...' : 'Publish Story'}
+            </button>
           </form>
         </div>
 
