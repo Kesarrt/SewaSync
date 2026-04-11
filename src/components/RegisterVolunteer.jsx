@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
-import { User, MapPin, Mail, Sparkles, CheckCircle } from 'lucide-react';
+import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { db, auth } from '../firebase';
+import { User, MapPin, Mail, Sparkles, CheckCircle, Lock } from 'lucide-react';
 import { sendApplicationReceivedEmail } from '../emailService';
 
 export default function RegisterVolunteer() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    password: '',
     location: ''
   });
   
@@ -28,16 +30,23 @@ export default function RegisterVolunteer() {
     setError('');
     
     try {
-      const volunteersRef = collection(db, 'volunteers');
+      // 1. Create Auth User
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const user = userCredential.user;
       
-      await addDoc(volunteersRef, {
+      // 2. Set Doc with UID
+      await setDoc(doc(db, 'volunteers', user.uid), {
         name: formData.name,
         email: formData.email,
         location: formData.location,
         status: 'pending',
-        role: 'applicant',
+        role: 'volunteer',
         createdAt: serverTimestamp()
       });
+
+      // 3. Immediately sign out pending user
+      await signOut(auth);
+      alert('Registration successful! Please wait for Admin approval.');
 
       // Send the automated notification!
       try {
@@ -137,6 +146,23 @@ export default function RegisterVolunteer() {
                 className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-12 pr-4 py-4 rounded-3xl outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all font-medium"
               />
               <Mail className="absolute left-4 top-4 text-slate-400 w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="password" className="text-sm font-bold text-slate-700 ml-2">Password</label>
+            <div className="relative">
+              <input 
+                id="password"
+                type="password" 
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="••••••••"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-12 pr-4 py-4 rounded-3xl outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all font-medium"
+              />
+              <Lock className="absolute left-4 top-4 text-slate-400 w-5 h-5" />
             </div>
           </div>
 

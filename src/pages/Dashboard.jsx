@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { LogOut, Users, MessageSquare, Sparkles, Clock, CheckCircle, Trash2, XCircle } from 'lucide-react'
-import { collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore'
+import { LogOut, Users, MessageSquare, Sparkles, Clock, CheckCircle, Trash2, XCircle, Heart } from 'lucide-react'
+import { collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 import { signOut } from 'firebase/auth'
 import { useNavigate } from 'react-router-dom'
@@ -16,6 +16,12 @@ export default function Dashboard() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastRequestTime, setLastRequestTime] = useState(0);
 
+  // CMS State
+  const [workTitle, setWorkTitle] = useState('');
+  const [workDesc, setWorkDesc] = useState('');
+  const [workImage, setWorkImage] = useState('');
+  const [recentWork, setRecentWork] = useState([]);
+
   // 📦 1. Real-time Firebase Data Sync
   useEffect(() => {
     const volQuery = query(collection(db, 'volunteers'), orderBy('createdAt', 'desc'));
@@ -28,9 +34,15 @@ export default function Dashboard() {
       setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
+    const workQuery = query(collection(db, 'recentWork'), orderBy('createdAt', 'desc'));
+    const unsubWork = onSnapshot(workQuery, (snapshot) => {
+      setRecentWork(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
     return () => {
       unsubVol();
       unsubMsg();
+      unsubWork();
     };
   }, []);
 
@@ -95,6 +107,25 @@ const handleAssignTask = async (vol) => {
     }
   };
 
+  const handleAddRecentWork = async (e) => {
+    e.preventDefault();
+    if (!workTitle || !workDesc || !workImage) return;
+
+    try {
+      await addDoc(collection(db, 'recentWork'), {
+        title: workTitle,
+        description: workDesc,
+        imageUrl: workImage,
+        createdAt: serverTimestamp()
+      });
+      setWorkTitle('');
+      setWorkDesc('');
+      setWorkImage('');
+    } catch (err) {
+      console.error("Error adding recent work:", err);
+    }
+  };
+
   const generateStrategy = async () => {
     if (!messages.length) {
       setAiResponse({
@@ -113,7 +144,7 @@ const handleAssignTask = async (vol) => {
     try {
       setIsGenerating(true);
       const apiKey = import.meta.env.VITE_GEMINI_KEY;
-      const messagesPrompt = messages.map(m => `${m.name}: ${m.message}`).join("\n");
+      const messagesPrompt = messages.length > 0 ? messages.map(m => `${m.name}: ${m.message}`).join("\n") : "None";
 
       // Note: Using gemini-1.5-flash-latest for 2026 stability
       const response = await fetch(
@@ -124,17 +155,24 @@ const handleAssignTask = async (vol) => {
           body: JSON.stringify({
             contents: [{
               parts: [{
-                text: `You are an AI insight engine. Analyze the messages and generate a structured report.
-Your response MUST be ONLY a raw JSON object. Do NOT wrap it in backticks. Do NOT include 'json' labels. Do NOT include any conversational text.
-Format strictly as:
+                text: `Analyze these community messages for an NGO. 
+Return ONLY a raw JSON object.
+
+CRITICAL RULES:
+1. "volunteers": Include anyone saying they want to join, help, work with us, or offering skills.
+2. "urgent": Include immediate needs like "urgently", "emergency", "flood", "starving".
+3. "help_seekers": Include general requests for food, clothes, or info.
+4. "actions": Suggest 2-3 specific steps the Admin should take.
+
+Format:
 {
-  "urgent": ["Life-safety or immediate needs"],
-  "help_seekers": ["General requests for aid"],
-  "volunteers": ["People offering help"],
-  "actions": ["Direct instructions for Admin based on messages"]
+  "urgent": [],
+  "help_seekers": [],
+  "volunteers": [],
+  "actions": []
 }
 
-Messages:
+Messages to analyze:
 ${messagesPrompt}`
               }]
             }]
@@ -290,6 +328,77 @@ ${messagesPrompt}`
         </div>
 
       </div>
+
+      {/* CONTENT MANAGEMENT SYSTEM */}
+      <h2 className="text-2xl font-black text-slate-800 mt-12 mb-6 flex items-center gap-2">
+        <Heart size={26} className="text-rose-500" /> CMS: Recent Work Gallery
+      </h2>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-10">
+        
+        {/* ADD FORM */}
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-1">
+          <h3 className="text-lg font-bold text-slate-800 mb-6 tracking-tight">Publish Impact Story</h3>
+          <form onSubmit={handleAddRecentWork} className="flex flex-col gap-4">
+            <div>
+              <label className="block text-[10px] font-black tracking-widest uppercase text-slate-400 mb-1">Title</label>
+              <input 
+                required value={workTitle} onChange={e => setWorkTitle(e.target.value)} 
+                className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-3 outline-none text-sm font-medium transition-all" 
+                placeholder="e.g. Flood Relief 2026" 
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black tracking-widest uppercase text-slate-400 mb-1">Description</label>
+              <textarea 
+                required value={workDesc} onChange={e => setWorkDesc(e.target.value)} 
+                className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-3 outline-none text-sm font-medium transition-all resize-none" 
+                rows="3" placeholder="Impact description..." 
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black tracking-widest uppercase text-slate-400 mb-1">Image URL</label>
+              <input 
+                required value={workImage} onChange={e => setWorkImage(e.target.value)} 
+                className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-3 outline-none text-sm font-medium transition-all" 
+                placeholder="https://..." 
+              />
+            </div>
+            <button type="submit" className="mt-2 bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-colors shadow-md">Publish Story</button>
+          </form>
+        </div>
+
+        {/* GALLERY MANAGER */}
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-2">
+          <h3 className="text-lg font-bold text-slate-800 mb-6 tracking-tight">Published Gallery ({recentWork.length})</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2">
+            {recentWork.length === 0 ? (
+              <p className="text-slate-400 text-sm italic col-span-2 bg-slate-50 p-6 rounded-2xl text-center">No recent work published. Start posting to your public portal!</p>
+            ) : (
+              recentWork.map(work => (
+                <div key={work.id} className="border border-slate-100 rounded-2xl flex overflow-hidden group shadow-sm hover:shadow-md transition-shadow bg-white h-28">
+                  <div className="w-28 bg-slate-100 overflow-hidden shrink-0">
+                    <img src={work.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" onError={(e) => e.target.src = 'https://images.unsplash.com/photo-1593113511332-9cbca45b4b1a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'} />
+                  </div>
+                  <div className="p-4 flex flex-col justify-center flex-1 relative">
+                    <button 
+                      onClick={() => handleRemoveItem('recentWork', work.id)} 
+                      className="absolute top-2 right-2 p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete Story"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                    <h4 className="font-bold text-slate-800 text-sm mb-1 pr-6 leading-tight line-clamp-1">{work.title}</h4>
+                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{work.description}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }

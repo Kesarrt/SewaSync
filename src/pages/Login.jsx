@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import { Lock, Mail, AlertTriangle } from 'lucide-react';
 
 export default function Login() {
@@ -17,9 +18,32 @@ export default function Login() {
     setError('');
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // Wait a moment and navigate to admin area
-      navigate('/admin/dashboard');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Traffic Cop: Fetch user roles
+      const userDoc = await getDoc(doc(db, 'volunteers', user.uid));
+      
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        
+        if (data.role === 'admin') {
+          navigate('/admin');
+        } else if (data.role === 'volunteer' && data.status === 'approved') {
+          navigate('/volunteer');
+        } else if (data.role === 'volunteer' && data.status === 'pending') {
+          alert('Your account is pending admin approval.');
+          await signOut(auth);
+          setLoading(false);
+        } else {
+          setError('Unknown account type.');
+          await signOut(auth);
+          setLoading(false);
+        }
+      } else {
+        // Safe-fallback for an admin created before this collection structure
+        navigate('/admin'); 
+      }
     } catch (err) {
       console.error(err);
       setError("Invalid email or password.");
@@ -32,7 +56,7 @@ export default function Login() {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
         <div className="bg-brand-navy p-6 text-center">
           <h2 className="text-2xl font-bold text-white tracking-wide">Sewa Sync</h2>
-          <p className="text-slate-300 text-sm mt-1">Authorized Administrator Portal</p>
+          <p className="text-slate-300 text-sm mt-1">Unified Access Portal</p>
         </div>
 
         <div className="p-8">

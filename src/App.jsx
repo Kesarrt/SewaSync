@@ -6,6 +6,7 @@ import { auth } from './firebase'
 
 // Page Components
 import Dashboard from './pages/Dashboard'
+import VolunteerDashboard from './pages/VolunteerDashboard'
 import Volunteers from './pages/Volunteers'
 import Tasks from './pages/Tasks'
 import Analytics from './pages/Analytics'
@@ -47,6 +48,13 @@ function App() {
 
         {/* Redirect root domain */}
         <Route path="/" element={<Navigate to="/public" replace />} />
+
+        {/* Protected Volunteer Route */}
+        <Route path="/volunteer" element={
+          <ProtectedRoute user={user}>
+            <VolunteerDashboard />
+          </ProtectedRoute>
+        } />
 
         {/* Protected Admin Routes */}
         <Route path="/admin" element={
