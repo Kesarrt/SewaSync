@@ -13,8 +13,8 @@ import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
 import PublicPortal from './pages/PublicPortal'
 import Login from './pages/Login'
-// ✅ FIXED: Added the new Registration component
 import RegisterVolunteer from './components/RegisterVolunteer' 
+import NotFound from './pages/NotFound'
 
 function App() {
   const [user, setUser] = useState(null)
@@ -76,7 +76,9 @@ function App() {
         <Route path="/volunteers" element={<Navigate to="/admin/volunteers" replace />} />
         <Route path="/analytics" element={<Navigate to="/admin/analytics" replace />} />
         <Route path="/settings" element={<Navigate to="/admin/settings" replace />} />
-
+        
+        {/* Mission Lost Protocol (404) */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   )

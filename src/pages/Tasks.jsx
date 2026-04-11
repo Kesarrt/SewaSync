@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { sendTaskAssignmentEmail } from '../emailService';
-import { CheckSquare, PlusCircle, UserCheck, MapPin, Award, Trash2 } from 'lucide-react';
+import { CheckSquare, PlusCircle, UserCheck, MapPin, Award, Trash2, Camera } from 'lucide-react';
 
 const locationData = {
   'Ramtek': ['T Point', 'Shitalwadi', 'Nagardhan', 'Station Road', 'Gandhi Chowk', 'KITS Area'],
@@ -242,10 +242,9 @@ export default function Tasks() {
         {/* LIVE TASK FEED (Right Column) */}
         <div className="lg:col-span-7 flex flex-col gap-4">
           {tasks.length === 0 ? (
-             <div className="bg-theme-surface transition-colors duration-300 rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-slate-400 h-64 text-center">
+             <div className="bg-theme-surface transition-colors duration-300 rounded-[2.5rem] p-10 flex flex-col items-center justify-center h-64 text-center">
                <CheckSquare size={48} className="mb-4 text-theme-primary/30" />
-               <p className="font-bold text-lg text-theme-text">No active operations</p>
-               <p className="text-sm opacity-60 text-theme-text">Use the command form to assign your first mission.</p>
+               <p className="text-xl font-black text-theme-text">No active missions in this sector yet.</p>
              </div>
           ) : (
             tasks.map(task => (
@@ -288,6 +287,17 @@ export default function Tasks() {
                 <p className="text-sm opacity-80 text-theme-text mb-6 leading-relaxed">
                   {task.description}
                 </p>
+
+                {/* PROOF OF WORK THUMBNAIL (Admin View) */}
+                {task.status === 'completed' && task.completionImage && (
+                   <div className="mb-6 p-4 bg-theme-base rounded-2xl border border-slate-200/10 shadow-inner group/proof relative overflow-hidden">
+                      <div className="flex items-center gap-2 mb-3">
+                         <Camera size={14} className="text-theme-primary" />
+                         <span className="text-[10px] font-black uppercase tracking-widest text-theme-primary">Completed Proof</span>
+                      </div>
+                      <img src={task.completionImage} alt="Operation Proof" className="w-full h-32 md:h-48 object-cover rounded-xl border border-theme-surface hover:scale-[1.02] transition-transform duration-500 shadow-md" />
+                   </div>
+                )}
 
                 <div className="flex items-center justify-between mt-auto">
                   {/* Assignment Ribbon */}

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, updateDoc, doc, onSnapshot, increment, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, onSnapshot, increment, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../firebase';
-import { CheckCircle, MapPin, Award, User, Phone, Activity, BookOpen, AlertCircle, Trophy } from 'lucide-react';
+import { CheckCircle, MapPin, Award, User, Phone, Activity, BookOpen, AlertCircle, Trophy, Camera, AlertOctagon, XCircle } from 'lucide-react';
 
 export default function VolunteerDashboard() {
   const [user, setUser] = useState(null);
@@ -16,6 +16,12 @@ export default function VolunteerDashboard() {
   const [bloodGroup, setBloodGroup] = useState('');
   const [education, setEducation] = useState('');
   const [expertise, setExpertise] = useState('');
+
+  // Proof of Work State
+  const [selectedTaskForProof, setSelectedTaskForProof] = useState(null);
+  const [proofFile, setProofFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [sosActive, setSosActive] = useState(false);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -116,24 +122,65 @@ export default function VolunteerDashboard() {
     }
   };
 
-  const handleCompleteTask = async (taskId, points = 10) => {
-    if (!volunteerDoc?.id) return;
+  const handleSOS = async () => {
+    if (window.confirm("CRITICAL: Deploying SOS will lock your coordinates and alert all priority admin channels. Proceed?")) {
+      try {
+        setSosActive(true);
+        await addDoc(collection(db, 'emergencies'), {
+          volunteerName: volunteerDoc.name || user.email,
+          volunteerEmail: user.email,
+          location: volunteerDoc.location || 'Unknown Sector',
+          phone: volunteerDoc.phone || 'Unknown',
+          status: 'critical',
+          timestamp: serverTimestamp()
+        });
+        alert("SOS Signal Transmitted! Secure your location.");
+      } catch (err) {
+        console.error("SOS Dispatch Failed:", err);
+      } finally {
+        setSosActive(false);
+      }
+    }
+  };
+
+  const convertToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const submitProofAndComplete = async (e) => {
+    e.preventDefault();
+    if (!volunteerDoc?.id || !selectedTaskForProof || !proofFile) return;
 
     try {
-      // 1. Update Task
-      await updateDoc(doc(db, 'tasks', taskId), {
-        status: 'completed'
+      setIsUploading(true);
+      const base64Image = await convertToBase64(proofFile);
+
+      // 1. Update Task with Image Signature
+      await updateDoc(doc(db, 'tasks', selectedTaskForProof.id), {
+        status: 'completed',
+        completionImage: base64Image
       });
 
-      // 2. Update Credits
+      // 2. Award Credits
       await updateDoc(doc(db, 'volunteers', volunteerDoc.id), {
-        credits: increment(points)
+        credits: increment(selectedTaskForProof.points || 10)
       });
 
-      // Update local state to reflect credits optimistic
-      setVolunteerDoc(prev => ({ ...prev, credits: (prev.credits || 0) + points }));
+      setVolunteerDoc(prev => ({ ...prev, credits: (prev.credits || 0) + (selectedTaskForProof.points || 10) }));
+      
+      // Clear Protocol
+      setSelectedTaskForProof(null);
+      setProofFile(null);
     } catch (err) {
-      console.error("Error completing task:", err);
+      console.error("Proof initialization error:", err);
+      alert("Failed to establish proof connection.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -161,13 +208,25 @@ export default function VolunteerDashboard() {
               <User size={14} /> Welcome back, {volunteerDoc.name || user.email}
             </p>
           </div>
-          <div className="bg-theme-surface transition-colors duration-300 px-4 py-2 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3">
-            <div className="bg-amber-100 p-2 rounded-xl text-amber-500">
-              <Award size={20} />
-            </div>
-            <div>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Credits</p>
-              <p className="font-black text-theme-text leading-none">{volunteerDoc.credits || 0}</p>
+          <div className="flex items-center gap-3">
+            <button 
+               onClick={handleSOS}
+               disabled={sosActive}
+               className="bg-red-50 hover:bg-red-500 text-red-600 hover:text-white transition-all duration-300 px-4 py-2 rounded-2xl shadow-sm border border-red-100 hover:border-red-600 flex items-center gap-2 group disabled:opacity-50"
+            >
+               <AlertOctagon size={20} className={sosActive ? 'animate-spin' : 'animate-pulse group-hover:animate-none'} />
+               <div className="text-left hidden sm:block">
+                  <p className="font-black text-xs leading-none">SYS/SOS</p>
+               </div>
+            </button>
+            <div className="bg-theme-surface transition-colors duration-300 px-4 py-2 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3">
+              <div className="bg-amber-100 p-2 rounded-xl text-amber-500">
+                <Award size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Credits</p>
+                <p className="font-black text-theme-text leading-none">{volunteerDoc.credits || 0}</p>
+              </div>
             </div>
           </div>
         </header>
@@ -306,10 +365,10 @@ export default function VolunteerDashboard() {
                       </p>
 
                       <button
-                        onClick={() => handleCompleteTask(task.id, task.points || 10)}
-                        className="w-full bg-theme-base transition-colors duration-300 hover:bg-emerald-500 text-slate-500 hover:text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 border border-slate-100 hover:border-emerald-600 group/btn"
+                        onClick={() => setSelectedTaskForProof(task)}
+                        className="w-full bg-theme-base transition-colors duration-300 hover:bg-theme-text text-theme-text opacity-70 hover:opacity-100 hover:text-theme-base font-black py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 border border-slate-200/10 hover:border-transparent group/btn uppercase tracking-widest text-[10px]"
                       >
-                        <CheckCircle size={18} className="text-slate-400 group-hover/btn:text-white" /> Mark as Completed
+                        <Camera size={16} className="text-theme-primary group-hover/btn:text-theme-base" /> Initiate Verification
                       </button>
                     </div>
                   ))}
@@ -369,6 +428,57 @@ export default function VolunteerDashboard() {
           </div>
         )}
       </div>
+
+      {/* PROOF OF WORK MODAL LAYER */}
+      {selectedTaskForProof && (
+         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="bg-theme-surface w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-300 p-8 border border-slate-200/5">
+               <button 
+                  onClick={() => { setSelectedTaskForProof(null); setProofFile(null); }}
+                  className="absolute top-6 right-6 text-slate-400 hover:text-red-500 transition-colors"
+               >
+                  <XCircle size={28} />
+               </button>
+
+               <div className="flex items-center gap-3 mb-6 pb-6 border-b border-theme-base">
+                  <div className="p-3 bg-indigo-500/10 text-indigo-500 rounded-2xl">
+                     <Camera size={28} />
+                  </div>
+                  <div>
+                     <h2 className="text-xl font-black text-theme-text">Proof of Work</h2>
+                     <p className="text-[10px] font-black tracking-widest uppercase text-theme-primary mt-1">Verification Required</p>
+                  </div>
+               </div>
+
+               <p className="text-theme-text opacity-70 mb-6 font-medium leading-relaxed text-sm">
+                  To finalize <span className="font-bold text-theme-text">"{selectedTaskForProof.title}"</span> and unlock your <span className="font-bold text-amber-500">{selectedTaskForProof.points}</span> Credits, establish visual proof of task completion.
+               </p>
+
+               <form onSubmit={submitProofAndComplete} className="flex flex-col gap-6">
+                  <div>
+                     <label className="block text-[10px] font-black tracking-widest uppercase text-theme-text opacity-50 mb-2">Completion Image Upload</label>
+                     <input 
+                        type="file" 
+                        accept="image/*"
+                        required 
+                        onChange={e => setProofFile(e.target.files[0])} 
+                        className="w-full bg-theme-base border border-theme-base rounded-2xl outline-none text-sm font-bold text-theme-text transition-all file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-theme-text file:text-theme-base hover:file:opacity-80 placeholder:text-slate-400 cursor-pointer shadow-inner p-2" 
+                     />
+                  </div>
+
+                  <button 
+                     type="submit" 
+                     disabled={isUploading}
+                     className="w-full bg-emerald-500 text-white font-black py-4 rounded-2xl hover:brightness-110 shadow-lg shadow-emerald-500/30 flex justify-center items-center gap-2 disabled:bg-slate-400 disabled:shadow-none transition-all uppercase tracking-widest text-xs"
+                  >
+                     {isUploading ? 'Validating Telemetry...' : 'Submit Evidence'}
+                  </button>
+               </form>
+
+            </div>
+         </div>
+      )}
+
     </div>
   );
 }

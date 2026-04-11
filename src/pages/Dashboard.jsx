@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [workFile, setWorkFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [recentWork, setRecentWork] = useState([]);
+  const [emergencies, setEmergencies] = useState([]);
 
   // 📦 0. Auth State Checker
   useEffect(() => {
@@ -60,10 +61,16 @@ export default function Dashboard() {
       setRecentWork(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
+    const emergencyQuery = query(collection(db, 'emergencies'), orderBy('timestamp', 'desc'));
+    const unsubEmergencies = onSnapshot(emergencyQuery, (snapshot) => {
+      setEmergencies(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(e => e.status === 'critical'));
+    });
+
     return () => {
       unsubVol();
       unsubMsg();
       unsubWork();
+      unsubEmergencies();
     };
   }, []);
 
@@ -240,7 +247,37 @@ ${messagesPrompt}`
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto bg-theme-base transition-colors duration-300 min-h-screen text-left">
+    <div className="p-6 max-w-7xl mx-auto bg-theme-base transition-colors duration-300 min-h-screen text-left relative">
+
+      {/* 🚨 SOS EMERGENCY BANNER */}
+      {emergencies.length > 0 && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[1000] w-[95%] max-w-5xl animate-in slide-in-from-top-10 fade-in duration-300">
+          <div className="bg-red-600 shadow-2xl shadow-red-600/40 rounded-3xl p-1 flex flex-col md:flex-row shadow-inner">
+             {emergencies.map(sos => (
+                <div key={sos.id} className="flex-1 bg-red-700/50 m-1 rounded-2xl p-4 flex items-center justify-between border border-red-500/50 backdrop-blur-md">
+                   <div className="flex items-center gap-4">
+                     <div className="bg-red-100 text-red-600 p-3 rounded-full animate-pulse shadow-md">
+                       <Target size={24} />
+                     </div>
+                     <div>
+                       <h3 className="font-black text-white text-lg tracking-wide uppercase">SOS Received</h3>
+                       <p className="text-red-100 text-xs font-bold font-mono mt-1">
+                          OPERATIVE: {sos.volunteerName} ({sos.phone})<br/>
+                          COORDS: {sos.location}
+                       </p>
+                     </div>
+                   </div>
+                   <button 
+                      onClick={() => updateDoc(doc(db, 'emergencies', sos.id), { status: 'resolved' })}
+                      className="bg-white text-red-600 hover:bg-red-50 font-black px-6 py-3 rounded-xl uppercase tracking-widest text-xs shadow-md transition-all active:scale-95"
+                   >
+                     Acknowledge
+                   </button>
+                </div>
+             ))}
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex justify-between items-center mb-8 bg-theme-surface transition-colors duration-300 p-6 rounded-2xl shadow-sm border border-slate-100">

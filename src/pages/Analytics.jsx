@@ -106,165 +106,177 @@ export default function Analytics() {
         <p className="text-theme-text opacity-70 font-bold text-xs uppercase mt-2">Mission Control Analytics Platform</p>
       </div>
 
-      {/* TOP ROW: Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        
-        {/* Card 1: Total Missions */}
-        <div className="bg-theme-surface rounded-[2rem] p-6 shadow-sm border border-slate-200/10 flex items-center justify-between group hover:-translate-y-1 transition-transform duration-300 animate-in fade-in slide-in-from-bottom-4">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Total Operations</p>
-            <h3 className="text-4xl font-black text-theme-text">{totalTasks}</h3>
-          </div>
-          <div className="bg-indigo-500/10 text-indigo-500 p-4 rounded-2xl group-hover:scale-110 transition-transform"><Target size={28}/></div>
-        </div>
-
-        {/* Card 2: Field Operatives */}
-        <div className="bg-theme-surface rounded-[2rem] p-6 shadow-sm border border-slate-200/10 flex items-center justify-between group hover:-translate-y-1 transition-transform duration-300 animate-in fade-in slide-in-from-bottom-4 delay-75">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Active Operatives</p>
-            <h3 className="text-4xl font-black text-theme-text">{totalVolunteers}</h3>
-          </div>
-          <div className="bg-teal-500/10 text-teal-500 p-4 rounded-2xl group-hover:scale-110 transition-transform"><Users size={28}/></div>
-        </div>
-
-        {/* Card 3: Total Credits Executed */}
-        <div className="bg-theme-surface rounded-[2rem] p-6 shadow-sm border border-slate-200/10 flex items-center justify-between group hover:-translate-y-1 transition-transform duration-300 animate-in fade-in slide-in-from-bottom-4 delay-150">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Credit Economy</p>
-            <h3 className="text-4xl font-black text-theme-text">{totalCredits}</h3>
-          </div>
-          <div className="bg-amber-500/10 text-amber-500 p-4 rounded-2xl group-hover:scale-110 transition-transform"><Award size={28}/></div>
-        </div>
-
-        {/* Card 4: Operation Fidelity */}
-        <div className="bg-theme-surface rounded-[2rem] p-6 shadow-sm border border-slate-200/10 flex items-center justify-between group hover:-translate-y-1 transition-transform duration-300 animate-in fade-in slide-in-from-bottom-4 delay-200">
-           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Completion Rate</p>
-            <div className="flex items-end gap-2">
-               <h3 className="text-4xl font-black text-emerald-500">{completionRate}%</h3>
+      {tasks.length === 0 ? (
+         <div className="flex flex-col items-center justify-center h-[50vh] text-center animate-in fade-in slide-in-from-bottom-4">
+            <div className="bg-theme-surface w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-200/10 text-theme-primary/50">
+               <Activity size={48} />
             </div>
+            <h2 className="text-2xl font-black text-theme-text tracking-tight">No active missions in this sector yet.</h2>
+            <p className="text-theme-text opacity-50 font-bold mt-2 uppercase tracking-widest text-[10px]">Deploy missions to generate analytics telemetry.</p>
+         </div>
+      ) : (
+      <>
+        {/* TOP ROW: Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          
+          {/* Card 1: Total Missions */}
+          <div className="bg-theme-surface rounded-[2rem] p-6 shadow-sm border border-slate-200/10 flex items-center justify-between group hover:-translate-y-1 transition-transform duration-300 animate-in fade-in slide-in-from-bottom-4">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Total Operations</p>
+              <h3 className="text-4xl font-black text-theme-text">{totalTasks}</h3>
+            </div>
+            <div className="bg-indigo-500/10 text-indigo-500 p-4 rounded-2xl group-hover:scale-110 transition-transform"><Target size={28}/></div>
           </div>
-          <div className="bg-emerald-500/10 text-emerald-500 p-4 rounded-2xl group-hover:scale-110 transition-transform"><Activity size={28}/></div>
-        </div>
-      </div>
 
-      {/* MIDDLE ROW: Graphs (Pie & Bar) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        
-        {/* Categories Pie Chart */}
-        <div className="bg-theme-surface rounded-[2.5rem] p-8 shadow-sm border border-slate-200/10 animate-in fade-in duration-700">
-           <h2 className="text-lg font-black text-theme-text flex items-center gap-2 mb-6">
-              <PieIcon className="text-indigo-500" size={20} /> Mission Categorization
-           </h2>
-           
-           <div className="h-64 w-full">
-              {categoryData.length > 0 ? (
-                 <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                       <Pie
-                          data={categoryData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={90}
-                          paddingAngle={5}
-                          dataKey="value"
-                          stroke="none"
-                       >
-                          {categoryData.map((entry, index) => (
-                             <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                          ))}
-                       </Pie>
-                       <RechartsTooltip content={<CustomTooltip />} />
-                    </PieChart>
-                 </ResponsiveContainer>
-              ) : (
-                 <div className="h-full flex items-center justify-center text-slate-400 font-bold opacity-50">Awaiting telemetry signatures...</div>
-              )}
-           </div>
+          {/* Card 2: Field Operatives */}
+          <div className="bg-theme-surface rounded-[2rem] p-6 shadow-sm border border-slate-200/10 flex items-center justify-between group hover:-translate-y-1 transition-transform duration-300 animate-in fade-in slide-in-from-bottom-4 delay-75">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Active Operatives</p>
+              <h3 className="text-4xl font-black text-theme-text">{totalVolunteers}</h3>
+            </div>
+            <div className="bg-teal-500/10 text-teal-500 p-4 rounded-2xl group-hover:scale-110 transition-transform"><Users size={28}/></div>
+          </div>
 
-           {/* Manual Legend */}
-           <div className="flex flex-wrap items-center justify-center gap-4 mt-4">
-              {categoryData.map((entry, index) => (
-                 <div key={index} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}></div>
-                    <span className="text-xs font-bold text-theme-text opacity-70 uppercase">{entry.name} ({entry.value})</span>
-                 </div>
-              ))}
-           </div>
+          {/* Card 3: Total Credits Executed */}
+          <div className="bg-theme-surface rounded-[2rem] p-6 shadow-sm border border-slate-200/10 flex items-center justify-between group hover:-translate-y-1 transition-transform duration-300 animate-in fade-in slide-in-from-bottom-4 delay-150">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Credit Economy</p>
+              <h3 className="text-4xl font-black text-theme-text">{totalCredits}</h3>
+            </div>
+            <div className="bg-amber-500/10 text-amber-500 p-4 rounded-2xl group-hover:scale-110 transition-transform"><Award size={28}/></div>
+          </div>
+
+          {/* Card 4: Operation Fidelity */}
+          <div className="bg-theme-surface rounded-[2rem] p-6 shadow-sm border border-slate-200/10 flex items-center justify-between group hover:-translate-y-1 transition-transform duration-300 animate-in fade-in slide-in-from-bottom-4 delay-200">
+             <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Completion Rate</p>
+              <div className="flex items-end gap-2">
+                 <h3 className="text-4xl font-black text-emerald-500">{completionRate}%</h3>
+              </div>
+            </div>
+            <div className="bg-emerald-500/10 text-emerald-500 p-4 rounded-2xl group-hover:scale-110 transition-transform"><Activity size={28}/></div>
+          </div>
         </div>
 
-        {/* Location Bar Chart */}
-        <div className="bg-theme-surface rounded-[2.5rem] p-8 shadow-sm border border-slate-200/10 animate-in fade-in duration-700 delay-150">
-           <h2 className="text-lg font-black text-theme-text flex items-center gap-2 mb-6">
-              <MapPin className="text-teal-500" size={20} /> Ops Geolocation
+        {/* MIDDLE ROW: Graphs (Pie & Bar) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          
+          {/* Categories Pie Chart */}
+          <div className="bg-theme-surface rounded-[2.5rem] p-8 shadow-sm border border-slate-200/10 animate-in fade-in duration-700">
+             <h2 className="text-lg font-black text-theme-text flex items-center gap-2 mb-6">
+                <PieIcon className="text-indigo-500" size={20} /> Mission Categorization
+             </h2>
+             
+             <div className="h-64 w-full">
+                {categoryData.length > 0 ? (
+                   <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                         <Pie
+                            data={categoryData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={90}
+                            paddingAngle={5}
+                            dataKey="value"
+                            stroke="none"
+                         >
+                            {categoryData.map((entry, index) => (
+                               <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                            ))}
+                         </Pie>
+                         <RechartsTooltip content={<CustomTooltip />} />
+                      </PieChart>
+                   </ResponsiveContainer>
+                ) : (
+                   <div className="h-full flex items-center justify-center text-slate-400 font-bold opacity-50">Awaiting telemetry signatures...</div>
+                )}
+             </div>
+
+             {/* Manual Legend */}
+             <div className="flex flex-wrap items-center justify-center gap-4 mt-4">
+                {categoryData.map((entry, index) => (
+                   <div key={index} className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}></div>
+                      <span className="text-xs font-bold text-theme-text opacity-70 uppercase">{entry.name} ({entry.value})</span>
+                   </div>
+                ))}
+             </div>
+          </div>
+
+          {/* Location Bar Chart */}
+          <div className="bg-theme-surface rounded-[2.5rem] p-8 shadow-sm border border-slate-200/10 animate-in fade-in duration-700 delay-150">
+             <h2 className="text-lg font-black text-theme-text flex items-center gap-2 mb-6">
+                <MapPin className="text-teal-500" size={20} /> Ops Geolocation
+             </h2>
+             
+             <div className="h-72 w-full">
+                {locationData.length > 0 ? (
+                   <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={locationData} maxBarSize={40}>
+                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150, 150, 150, 0.1)" />
+                         <XAxis 
+                            dataKey="name" 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
+                            dy={10}
+                         />
+                         <YAxis hide />
+                         <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} />
+                         <Bar dataKey="Count" fill="var(--theme-primary, #6366f1)" radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                   </ResponsiveContainer>
+                ) : (
+                   <div className="h-full flex items-center justify-center text-slate-400 font-bold opacity-50">Awaiting geolocation mapping...</div>
+                )}
+             </div>
+          </div>
+
+        </div>
+
+        {/* BOTTOM ROW: Activity Trend Line Chart */}
+        <div className="bg-theme-surface rounded-[2.5rem] p-8 shadow-sm border border-slate-200/10 animate-in fade-in duration-700 delay-300">
+           <h2 className="text-lg font-black text-theme-text flex items-center gap-2 mb-8">
+              <TrendingUp className="text-rose-500" size={20} /> Timeline Execution Trend
            </h2>
-           
-           <div className="h-72 w-full">
-              {locationData.length > 0 ? (
+
+           <div className="h-80 w-full">
+              {trendData.length > 0 ? (
                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={locationData} maxBarSize={40}>
+                    <LineChart data={trendData}>
                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150, 150, 150, 0.1)" />
                        <XAxis 
-                          dataKey="name" 
+                          dataKey="date" 
                           axisLine={false} 
                           tickLine={false} 
-                          tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
-                          dy={10}
+                          tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }}
+                          dy={15}
                        />
-                       <YAxis hide />
-                       <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} />
-                       <Bar dataKey="Count" fill="var(--theme-primary, #6366f1)" radius={[6, 6, 0, 0]} />
-                    </BarChart>
+                       <YAxis 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }}
+                          dx={-10}
+                       />
+                       <RechartsTooltip content={<CustomTooltip />} />
+                       <Line 
+                          type="monotone" 
+                          dataKey="Missions" 
+                          stroke="var(--theme-primary, #6366f1)" 
+                          strokeWidth={4}
+                          dot={{ fill: 'var(--theme-primary, #6366f1)', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                          activeDot={{ r: 8 }}
+                       />
+                    </LineChart>
                  </ResponsiveContainer>
               ) : (
-                 <div className="h-full flex items-center justify-center text-slate-400 font-bold opacity-50">Awaiting geolocation mapping...</div>
+                 <div className="h-full flex items-center justify-center text-slate-400 font-bold opacity-50">Insufficient data for timeline modeling...</div>
               )}
            </div>
         </div>
-
-      </div>
-
-      {/* BOTTOM ROW: Activity Trend Line Chart */}
-      <div className="bg-theme-surface rounded-[2.5rem] p-8 shadow-sm border border-slate-200/10 animate-in fade-in duration-700 delay-300">
-         <h2 className="text-lg font-black text-theme-text flex items-center gap-2 mb-8">
-            <TrendingUp className="text-rose-500" size={20} /> Timeline Execution Trend
-         </h2>
-
-         <div className="h-80 w-full">
-            {trendData.length > 0 ? (
-               <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendData}>
-                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150, 150, 150, 0.1)" />
-                     <XAxis 
-                        dataKey="date" 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }}
-                        dy={15}
-                     />
-                     <YAxis 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }}
-                        dx={-10}
-                     />
-                     <RechartsTooltip content={<CustomTooltip />} />
-                     <Line 
-                        type="monotone" 
-                        dataKey="Missions" 
-                        stroke="var(--theme-primary, #6366f1)" 
-                        strokeWidth={4}
-                        dot={{ fill: 'var(--theme-primary, #6366f1)', r: 5, strokeWidth: 2, stroke: '#fff' }}
-                        activeDot={{ r: 8 }}
-                     />
-                  </LineChart>
-               </ResponsiveContainer>
-            ) : (
-               <div className="h-full flex items-center justify-center text-slate-400 font-bold opacity-50">Insufficient data for timeline modeling...</div>
-            )}
-         </div>
-      </div>
+      </>
+      )}
 
     </div>
   );
