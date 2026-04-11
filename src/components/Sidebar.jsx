@@ -4,7 +4,7 @@ import { Home, FileText, Users, Settings, Activity, PieChart, Globe } from 'luci
 
 export default function Sidebar() {
   return (
-    <div className="fixed left-0 top-0 h-full w-20 bg-brand-navy flex flex-col items-center py-6 shadow-xl z-50">
+    <div className="fixed left-0 top-0 h-full w-20 bg-theme-surface transition-colors duration-300 flex flex-col items-center py-6 shadow-xl z-50">
       {/* Brand Icon */}
       <NavLink to="/dashboard" className="w-10 h-10 bg-brand-teal rounded-lg flex items-center justify-center text-white font-bold text-xl mb-10 shadow-lg hover:bg-brand-teal-light hover:text-brand-teal transition-colors">
         <Activity size={24} />
@@ -38,7 +38,7 @@ function NavItem({ to, icon, title }) {
         `p-3 rounded-xl cursor-pointer transition-all duration-200 block ${
           isActive 
             ? 'bg-indigo-600/30 text-white' 
-            : 'text-slate-400 hover:text-white hover:bg-white/10'
+            : 'text-slate-400 hover:text-white hover:bg-theme-surface transition-colors duration-300/10'
         }`
       }
     >

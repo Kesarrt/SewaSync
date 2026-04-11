@@ -8,14 +8,52 @@
   --color-brand-teal-light: #CCFBF1;
   --color-brand-red: #EF4444;
   --color-brand-background: #F8FAFC;
+  /* Theme Engine Variables for Tailwind v4 */
+  --color-theme-base: var(--theme-base);
+  --color-theme-surface: var(--theme-surface);
+  --color-theme-primary: var(--theme-primary);
+  --color-theme-text: var(--theme-text);
+}
+
+@layer base {
+  /* Default & Ocean Theme */
+  :root,
+  [data-theme='ocean'] {
+    --theme-base: var(--color-slate-50);
+    --theme-surface: #ffffff;
+    --theme-primary: var(--color-indigo-500);
+    --theme-text: var(--color-slate-900);
+  }
+
+  [data-theme='midnight'] {
+    --theme-base: var(--color-slate-950);
+    --theme-surface: var(--color-slate-900);
+    --theme-primary: var(--color-blue-500);
+    --theme-text: var(--color-slate-50);
+  }
+
+  [data-theme='pastel'] {
+    --theme-base: var(--color-fuchsia-50);
+    --theme-surface: #ffffff;
+    --theme-primary: var(--color-fuchsia-500);
+    --theme-text: var(--color-fuchsia-950);
+  }
+
+  [data-theme='forest'] {
+    --theme-base: var(--color-emerald-50);
+    --theme-surface: #ffffff;
+    --theme-primary: var(--color-emerald-500);
+    --theme-text: var(--color-emerald-950);
+  }
 }
 
 body {
-  background-color: var(--color-brand-background);
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
-  color: #334155;
   margin: 0;
   padding: 0;
+  background-color: var(--theme-base);
+  color: var(--theme-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Custom pattern utility for the Map Placeholder */

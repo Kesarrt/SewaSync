@@ -2,14 +2,16 @@ import React, { useEffect, useState } from 'react'
 import { LogOut, Users, MessageSquare, Sparkles, Clock, CheckCircle, Trash2, XCircle, Heart } from 'lucide-react'
 import { collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../firebase'
-import { signOut } from 'firebase/auth'
+import { signOut, onAuthStateChanged } from 'firebase/auth'
 import { useNavigate } from 'react-router-dom'
 // ✅ Linked to your new Email Engine
 import { sendWelcomeEmail, sendTaskAssignmentEmail } from '../emailService'
+import ActiveTeam from '../components/ActiveTeam'
 
 export default function Dashboard() {
   const navigate = useNavigate();
 
+  const [adminName, setAdminName] = useState('');
   const [volunteers, setVolunteers] = useState([]);
   const [messages, setMessages] = useState([]);
   const [aiResponse, setAiResponse] = useState(null);
@@ -21,6 +23,24 @@ export default function Dashboard() {
   const [workDesc, setWorkDesc] = useState('');
   const [workImage, setWorkImage] = useState('');
   const [recentWork, setRecentWork] = useState([]);
+
+  // 📦 0. Auth State Checker
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        if (user.displayName) {
+          setAdminName(user.displayName);
+        } else if (user.email) {
+          setAdminName(user.email.split('@')[0]);
+        } else {
+          setAdminName('Admin');
+        }
+      } else {
+        setAdminName('');
+      }
+    });
+    return () => unsubAuth();
+  }, []);
 
   // 📦 1. Real-time Firebase Data Sync
   useEffect(() => {
@@ -211,13 +231,15 @@ ${messagesPrompt}`
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto bg-slate-50 min-h-screen text-left">
+    <div className="p-6 max-w-7xl mx-auto bg-theme-base transition-colors duration-300 min-h-screen text-left">
 
       {/* Header */}
-      <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <div className="flex justify-between items-center mb-8 bg-theme-surface transition-colors duration-300 p-6 rounded-2xl shadow-sm border border-slate-100">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight text-left">SewaSync <span className="text-indigo-600">Admin</span></h1>
-          <p className="text-sm text-slate-500 font-bold uppercase flex items-center gap-1">
+          <h1 className="text-3xl font-black text-theme-text tracking-tight text-left">
+            Welcome back, <span className="text-indigo-600">{adminName || 'Admin'}</span>
+          </h1>
+          <p className="text-sm text-slate-500 font-bold uppercase flex items-center gap-1 mt-1">
             <Clock size={14}/> Operational Dashboard
           </p>
         </div>
@@ -232,7 +254,7 @@ ${messagesPrompt}`
             {isGenerating ? "Analyzing..." : "AI Insight"}
           </button>
 
-          <button onClick={handleLogout} className="bg-slate-100 p-2.5 rounded-2xl text-slate-500 hover:text-red-500 transition-all">
+          <button onClick={handleLogout} className="bg-theme-surface p-2.5 rounded-2xl text-slate-500 hover:text-red-500 transition-all">
             <LogOut size={20}/>
           </button>
         </div>
@@ -261,20 +283,25 @@ ${messagesPrompt}`
       )}
 
       {/* DATA MANAGEMENT SECTION */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        {/* Active Team Leaderboard Column */}
+        <div className="lg:col-span-1">
+          <ActiveTeam />
+        </div>
 
         {/* Volunteers Column */}
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-          <h2 className="text-xl font-black mb-6 flex items-center gap-2 text-slate-800"><Users size={22} className="text-indigo-500"/> Volunteer Applications</h2>
+        <div className="bg-theme-surface transition-colors duration-300 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-1">
+          <h2 className="text-xl font-black mb-6 flex items-center gap-2 text-theme-text"><Users size={22} className="text-indigo-500"/> Volunteer Applications</h2>
 
           {volunteers.length === 0 ? (
             <p className="text-slate-400 text-sm italic">No applications in the queue.</p>
           ) : (
             <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
               {volunteers.map(vol => (
-                <div key={vol.id} className="flex justify-between items-center p-5 bg-slate-50/50 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-all group">
+                <div key={vol.id} className="flex justify-between items-center p-5 bg-theme-base transition-colors duration-300/50 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-all group">
                   <div className="text-left">
-                    <p className="font-bold text-slate-900">{vol.name}</p>
+                    <p className="font-bold text-theme-text">{vol.name}</p>
                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-tight">{vol.location || 'Location Pending'}</p>
                     <div className="mt-1">
                       <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${vol.status === 'approved' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
@@ -295,7 +322,7 @@ ${messagesPrompt}`
                     )}
                     <button 
                       onClick={() => handleRemoveItem('volunteers', vol.id)}
-                      className="p-2.5 bg-white text-slate-300 hover:text-red-500 border border-slate-100 hover:border-red-100 rounded-xl transition-all"
+                      className="p-2.5 bg-theme-surface transition-colors duration-300 text-slate-300 hover:text-red-500 border border-slate-100 hover:border-red-100 rounded-xl transition-all"
                       title="Delete"
                     >
                       <Trash2 size={20}/>
@@ -308,12 +335,12 @@ ${messagesPrompt}`
         </div>
 
         {/* Community Messages Column */}
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-          <h2 className="text-xl font-black mb-6 flex items-center gap-2 text-slate-800"><MessageSquare size={22} className="text-teal-500"/> Community Voice</h2>
+        <div className="bg-theme-surface transition-colors duration-300 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-1">
+          <h2 className="text-xl font-black mb-6 flex items-center gap-2 text-theme-text"><MessageSquare size={22} className="text-teal-500"/> Community Voice</h2>
 
           <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
             {messages.map(msg => (
-              <div key={msg.id} className="p-5 bg-slate-50/50 rounded-2xl border border-slate-100 relative group hover:border-teal-200 transition-all">
+              <div key={msg.id} className="p-5 bg-theme-base transition-colors duration-300/50 rounded-2xl border border-slate-100 relative group hover:border-teal-200 transition-all">
                 <button 
                   onClick={() => handleRemoveItem('messages', msg.id)} 
                   className="absolute right-4 top-4 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
@@ -330,21 +357,21 @@ ${messagesPrompt}`
       </div>
 
       {/* CONTENT MANAGEMENT SYSTEM */}
-      <h2 className="text-2xl font-black text-slate-800 mt-12 mb-6 flex items-center gap-2">
+      <h2 className="text-2xl font-black text-theme-text mt-12 mb-6 flex items-center gap-2">
         <Heart size={26} className="text-rose-500" /> CMS: Recent Work Gallery
       </h2>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-10">
         
         {/* ADD FORM */}
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-1">
-          <h3 className="text-lg font-bold text-slate-800 mb-6 tracking-tight">Publish Impact Story</h3>
+        <div className="bg-theme-surface transition-colors duration-300 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-1">
+          <h3 className="text-lg font-bold text-theme-text mb-6 tracking-tight">Publish Impact Story</h3>
           <form onSubmit={handleAddRecentWork} className="flex flex-col gap-4">
             <div>
               <label className="block text-[10px] font-black tracking-widest uppercase text-slate-400 mb-1">Title</label>
               <input 
                 required value={workTitle} onChange={e => setWorkTitle(e.target.value)} 
-                className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-3 outline-none text-sm font-medium transition-all" 
+                className="w-full bg-theme-base transition-colors duration-300 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-3 outline-none text-sm font-medium transition-all" 
                 placeholder="e.g. Flood Relief 2026" 
               />
             </div>
@@ -352,7 +379,7 @@ ${messagesPrompt}`
               <label className="block text-[10px] font-black tracking-widest uppercase text-slate-400 mb-1">Description</label>
               <textarea 
                 required value={workDesc} onChange={e => setWorkDesc(e.target.value)} 
-                className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-3 outline-none text-sm font-medium transition-all resize-none" 
+                className="w-full bg-theme-base transition-colors duration-300 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-3 outline-none text-sm font-medium transition-all resize-none" 
                 rows="3" placeholder="Impact description..." 
               />
             </div>
@@ -360,7 +387,7 @@ ${messagesPrompt}`
               <label className="block text-[10px] font-black tracking-widest uppercase text-slate-400 mb-1">Image URL</label>
               <input 
                 required value={workImage} onChange={e => setWorkImage(e.target.value)} 
-                className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-3 outline-none text-sm font-medium transition-all" 
+                className="w-full bg-theme-base transition-colors duration-300 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-3 outline-none text-sm font-medium transition-all" 
                 placeholder="https://..." 
               />
             </div>
@@ -369,16 +396,16 @@ ${messagesPrompt}`
         </div>
 
         {/* GALLERY MANAGER */}
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-2">
-          <h3 className="text-lg font-bold text-slate-800 mb-6 tracking-tight">Published Gallery ({recentWork.length})</h3>
+        <div className="bg-theme-surface transition-colors duration-300 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-2">
+          <h3 className="text-lg font-bold text-theme-text mb-6 tracking-tight">Published Gallery ({recentWork.length})</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2">
             {recentWork.length === 0 ? (
-              <p className="text-slate-400 text-sm italic col-span-2 bg-slate-50 p-6 rounded-2xl text-center">No recent work published. Start posting to your public portal!</p>
+              <p className="text-slate-400 text-sm italic col-span-2 bg-theme-base transition-colors duration-300 p-6 rounded-2xl text-center">No recent work published. Start posting to your public portal!</p>
             ) : (
               recentWork.map(work => (
-                <div key={work.id} className="border border-slate-100 rounded-2xl flex overflow-hidden group shadow-sm hover:shadow-md transition-shadow bg-white h-28">
-                  <div className="w-28 bg-slate-100 overflow-hidden shrink-0">
+                <div key={work.id} className="border border-slate-100 rounded-2xl flex overflow-hidden group shadow-sm hover:shadow-md transition-shadow bg-theme-surface transition-colors duration-300 h-28">
+                  <div className="w-28 bg-theme-surface overflow-hidden shrink-0">
                     <img src={work.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" onError={(e) => e.target.src = 'https://images.unsplash.com/photo-1593113511332-9cbca45b4b1a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'} />
                   </div>
                   <div className="p-4 flex flex-col justify-center flex-1 relative">
@@ -389,7 +416,7 @@ ${messagesPrompt}`
                     >
                       <Trash2 size={16} />
                     </button>
-                    <h4 className="font-bold text-slate-800 text-sm mb-1 pr-6 leading-tight line-clamp-1">{work.title}</h4>
+                    <h4 className="font-bold text-theme-text text-sm mb-1 pr-6 leading-tight line-clamp-1">{work.title}</h4>
                     <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{work.description}</p>
                   </div>
                 </div>

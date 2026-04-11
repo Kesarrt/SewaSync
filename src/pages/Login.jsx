@@ -52,9 +52,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
-        <div className="bg-brand-navy p-6 text-center">
+    <div className="min-h-screen bg-theme-base transition-colors duration-300 flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-md bg-theme-surface transition-colors duration-300 rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+        <div className="bg-theme-surface transition-colors duration-300 p-6 text-center">
           <h2 className="text-2xl font-bold text-white tracking-wide">Sewa Sync</h2>
           <p className="text-slate-300 text-sm mt-1">Unified Access Portal</p>
         </div>
@@ -75,7 +75,7 @@ export default function Login() {
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-brand-teal focus:bg-white transition-colors"
+                  className="w-full pl-10 pr-4 py-3 bg-theme-base transition-colors duration-300 border border-slate-200 rounded-xl outline-none focus:border-brand-teal focus:bg-theme-surface transition-colors duration-300 transition-colors"
                   placeholder="admin@sewasync.org"
                   required
                 />
@@ -90,7 +90,7 @@ export default function Login() {
                   type="password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-brand-teal focus:bg-white transition-colors"
+                  className="w-full pl-10 pr-4 py-3 bg-theme-base transition-colors duration-300 border border-slate-200 rounded-xl outline-none focus:border-brand-teal focus:bg-theme-surface transition-colors duration-300 transition-colors"
                   placeholder="••••••••"
                   required
                 />

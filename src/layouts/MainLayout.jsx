@@ -3,7 +3,7 @@ import Sidebar from '../components/Sidebar';
 
 export default function MainLayout({ children }) {
   return (
-    <div className="min-h-screen bg-brand-background flex">
+    <div className="min-h-screen bg-theme-base transition-colors duration-300 flex">
       <Sidebar />
       {/* Main Content wrapper with left padding to account for fixed Sidebar */}
       <main className="flex-1 ml-20">

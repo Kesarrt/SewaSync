@@ -50,8 +50,8 @@ export default function Volunteers() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {volunteers.map(vol => (
-            <div 
-              key={vol.id} 
+            <div
+              key={vol.id}
               className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all flex flex-col items-center text-center relative overflow-hidden group"
             >
               {/* Top Accent Bar */}
@@ -70,7 +70,7 @@ export default function Volunteers() {
 
               {/* Identity Details */}
               <h3 className="text-lg font-bold text-slate-900 mb-1">{vol.name}</h3>
-              
+
               <div className="flex items-center gap-1.5 text-slate-500 text-sm mb-4">
                 <MapPin size={14} />
                 <span>{vol.location || 'Location Pending'}</span>
