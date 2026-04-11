@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, FileText, Users, Settings, Activity, PieChart, Globe } from 'lucide-react';
+import { Home, FileText, Users, Settings, Activity, PieChart, Globe, Map } from 'lucide-react';
 
 export default function Sidebar() {
   return (
@@ -14,7 +14,7 @@ export default function Sidebar() {
       <nav className="flex flex-col gap-6 flex-1">
         <NavItem to="/admin/dashboard" icon={<Home size={24} />} title="Dashboard" />
         <NavItem to="/admin/tasks" icon={<FileText size={24} />} title="Tasks" />
-        <NavItem to="/admin/volunteers" icon={<Users size={24} />} title="Volunteers" />
+        <NavItem to="/admin/volunteers" icon={<Map size={24} />} title="Map" />
         <NavItem to="/admin/analytics" icon={<PieChart size={24} />} title="Analytics" />
       </nav>
 

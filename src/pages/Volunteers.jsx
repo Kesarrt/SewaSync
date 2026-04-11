@@ -1,96 +1,168 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Award, MapPin, Activity, User } from 'lucide-react';
+import { Map as MapIcon, Target, CheckCircle, Clock, User } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
 
-export default function Volunteers() {
-  const [volunteers, setVolunteers] = useState([]);
+// Geospatial lookup for Tasks
+const locationCoords = {
+  'ramtek station': [21.3980, 79.3230],
+  'main market': [21.3950, 79.3280],
+  'near kits': [21.4110, 79.3440],
+  'gandhi chowk': [21.3950, 79.3280],
+  'mansar': [21.3700, 79.2550],
+  'nagardhan': [21.3340, 79.3175],
+  'nagpur city': [21.145, 79.088]
+};
+
+// Map Recenter Helper 
+function MapRecenter({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo(center, 13, { duration: 1.5 });
+  }, [center, map]);
+  return null;
+}
+
+// Custom Marker Engine
+const createMarkerIcon = (status) => {
+  const isCompleted = status === 'completed';
+  const color = isCompleted ? '#10b981' : '#f97316'; // Emerald vs Orange
+  const shadowUrl = isCompleted ? 'rgba(16, 185, 129, 0.4)' : 'rgba(249, 115, 22, 0.4)';
+
+  return L.divIcon({
+    className: 'custom-leaflet-marker',
+    html: `<div style="
+      background-color: ${color}; 
+      width: 18px; 
+      height: 18px; 
+      border-radius: 50%; 
+      border: 3px solid white; 
+      box-shadow: 0 0 10px ${shadowUrl};
+    "></div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  });
+};
+
+export default function MissionMap() {
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mapCenter, setMapCenter] = useState([21.396, 79.323]); // Default to Ramtek
+  const [selectedArea, setSelectedArea] = useState('ramtek');
 
   useEffect(() => {
-    // Connect to the 'volunteers' collection and filter for approved status
-    const q = query(
-      collection(db, 'volunteers'),
-      where('status', '==', 'approved')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const volds = snapshot.docs.map(doc => ({
+    // Connect to the 'tasks' collection
+    const unsubscribe = onSnapshot(collection(db, 'tasks'), (snapshot) => {
+      const allTasks = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      setVolunteers(volds);
+      setTasks(allTasks);
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching volunteers:", error);
+      console.error("Error fetching tasks:", error);
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
+  const handleAreaChange = (e) => {
+    const area = e.target.value;
+    setSelectedArea(area);
+    if (area === 'ramtek') setMapCenter([21.396, 79.323]);
+    if (area === 'mansar') setMapCenter([21.370, 79.255]);
+    if (area === 'nagpur') setMapCenter([21.145, 79.088]);
+  };
+
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto bg-slate-50 min-h-[80vh] rounded-3xl">
-      <div className="mb-10">
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Active Team</h1>
-        <p className="text-slate-500 font-bold text-xs uppercase mt-2 flex items-center gap-1">
-          <Activity size={14} className="text-indigo-600" /> {volunteers.length} Approved Volunteers
-        </p>
+    <div className="p-6 md:p-8 max-w-7xl mx-auto bg-theme-base min-h-[80vh] rounded-[2.5rem] transition-colors duration-300">
+      <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-theme-text tracking-tight animate-in fade-in slide-in-from-left-4">Mission Map</h1>
+          <p className="opacity-70 font-bold text-xs uppercase mt-2 flex items-center gap-1 text-theme-text">
+            <Target size={14} className="text-theme-primary" /> Tracking {tasks.length} Live Operations
+          </p>
+        </div>
+
+        {/* Operational Area Dropdown */}
+        <div className="bg-theme-surface p-3 rounded-2xl border border-theme-primary/20 shadow-sm flex items-center gap-3 w-full md:w-auto transition-colors duration-300">
+           <MapIcon size={18} className="text-theme-primary" />
+           <select 
+              value={selectedArea}
+              onChange={handleAreaChange}
+              className="bg-transparent border-none outline-none font-bold text-theme-text text-sm cursor-pointer focus:ring-0"
+           >
+              <option value="ramtek">Ramtek (Central)</option>
+              <option value="mansar">Mansar</option>
+              <option value="nagpur">Nagpur City</option>
+           </select>
+        </div>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-        </div>
-      ) : volunteers.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
-          <User size={48} className="mx-auto text-slate-300 mb-4" />
-          <p className="text-slate-500 font-medium">No approved volunteers found.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {volunteers.map(vol => (
-            <div
-              key={vol.id}
-              className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all flex flex-col items-center text-center relative overflow-hidden group"
+      {/* THE MAP INTEGRATION */}
+      <div className="mb-12 bg-theme-surface p-4 rounded-3xl border-2 border-theme-primary shadow-xl overflow-hidden shadow-theme-primary/10 transition-colors animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="h-[500px] rounded-2xl overflow-hidden relative z-0 ring-1 ring-slate-200 shadow-inner">
+          
+          {loading ? (
+             <div className="w-full h-full flex justify-center items-center bg-theme-base/50">
+               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-theme-primary"></div>
+             </div>
+          ) : (
+            <MapContainer 
+              center={mapCenter} 
+              zoom={13} 
+              scrollWheelZoom={false} 
+              className="w-full h-full"
             >
-              {/* Top Accent Bar */}
-              <div className="absolute top-0 left-0 w-full h-1.5 bg-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <MapRecenter center={mapCenter} />
+              
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              
+              {tasks.map(task => {
+                // Safely convert text to lowercase to search dictionary
+                const locKey = task.location ? String(task.location).toLowerCase().trim() : '';
+                const coords = locationCoords[locKey];
+                
+                if (coords) {
+                  const isCompleted = task.status === 'completed';
 
-              {/* Status Badge */}
-              <div className="absolute top-4 right-4 bg-emerald-100 text-emerald-700 text-[10px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                Active
-              </div>
-
-              {/* Avatar Placeholder */}
-              <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-4 mt-2">
-                <User size={32} className="text-indigo-300" />
-              </div>
-
-              {/* Identity Details */}
-              <h3 className="text-lg font-bold text-slate-900 mb-1">{vol.name}</h3>
-
-              <div className="flex items-center gap-1.5 text-slate-500 text-sm mb-4">
-                <MapPin size={14} />
-                <span>{vol.location || 'Location Pending'}</span>
-              </div>
-
-              {/* Stats Card */}
-              <div className="bg-slate-50 w-full p-3 rounded-2xl border border-slate-100 flex items-center justify-center gap-2 mb-6">
-                <Award size={16} className="text-amber-500" />
-                <span className="text-xs font-bold text-slate-700">12 Tasks Completed</span>
-              </div>
-
-              {/* Action Button */}
-              <button className="w-full bg-indigo-50 text-indigo-700 font-bold py-3 text-sm rounded-2xl hover:bg-indigo-600 hover:text-white transition-colors flex justify-center items-center gap-2 mt-auto">
-                <Activity size={16} />
-                View Activity
-              </button>
-            </div>
-          ))}
+                  return (
+                    <Marker position={coords} key={task.id} icon={createMarkerIcon(task.status)}>
+                      <Popup className="font-sans">
+                        <div className="text-left py-1 w-48">
+                          <h3 className="font-black text-slate-800 text-sm leading-tight mb-2">{task.title || 'Untitled Mission'}</h3>
+                          
+                          <div className="flex items-center gap-1.5 text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-3">
+                            <User size={12} className="text-indigo-500"/> 
+                            <span className="truncate">{task.assignedToEmail || 'Unassigned'}</span>
+                          </div>
+  
+                          {isCompleted ? (
+                             <div className="bg-emerald-50 text-emerald-600 font-bold text-xs py-1.5 px-2 rounded flex justify-center items-center gap-1 w-full border border-emerald-100">
+                                <CheckCircle size={14} /> Mission Accomplished
+                             </div>
+                          ) : (
+                             <div className="bg-orange-50 text-orange-600 font-bold text-xs py-1.5 px-2 rounded flex justify-center items-center gap-1 w-full border border-orange-100">
+                                <Clock size={14} /> Pending Operation
+                             </div>
+                          )}
+                        </div>
+                      </Popup>
+                    </Marker>
+                  );
+                }
+                return null;
+              })}
+            </MapContainer>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
