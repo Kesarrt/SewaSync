@@ -5,15 +5,22 @@ import { Map as MapIcon, Target, CheckCircle, Clock, User } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
-// Geospatial lookup for Tasks
+// Geospatial lookup for Tasks (Strict Sub-Areas)
 const locationCoords = {
-  'ramtek station': [21.3980, 79.3230],
-  'main market': [21.3950, 79.3280],
-  'near kits': [21.4110, 79.3440],
-  'gandhi chowk': [21.3950, 79.3280],
-  'mansar': [21.3700, 79.2550],
-  'nagardhan': [21.3340, 79.3175],
-  'nagpur city': [21.145, 79.088]
+  't point': [21.388, 79.328],
+  'shitalwadi': [21.392, 79.335],
+  'nagardhan': [21.345, 79.315],
+  'station road': [21.398, 79.323],
+  'gandhi chowk': [21.395, 79.328],
+  'kits area': [21.411, 79.344],
+  'sonegaon': [21.100, 79.055],
+  'sitabuldi': [21.145, 79.088],
+  'dharampeth': [21.140, 79.060],
+  'itwari': [21.155, 79.110],
+  'ramtek station': [21.3980, 79.3230], // legacy
+  'near kits': [21.4110, 79.3440], // legacy
+  'mansar': [21.3700, 79.2550], // legacy
+  'nagpur city': [21.145, 79.088] // legacy
 };
 
 // Map Recenter Helper 
@@ -136,7 +143,10 @@ export default function MissionMap() {
                     <Marker position={coords} key={task.id} icon={createMarkerIcon(task.status)}>
                       <Popup className="font-sans">
                         <div className="text-left py-1 w-48">
-                          <h3 className="font-black text-slate-800 text-sm leading-tight mb-2">{task.title || 'Untitled Mission'}</h3>
+                          <p className="text-[10px] uppercase font-black tracking-widest text-indigo-500 mb-1 border-b border-slate-100 pb-1">
+                             1 Task Assigned here
+                          </p>
+                          <h3 className="font-black text-slate-800 text-sm leading-tight mb-2 pt-1">{task.title || 'Untitled Mission'}</h3>
                           
                           <div className="flex items-center gap-1.5 text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-3">
                             <User size={12} className="text-indigo-500"/> 

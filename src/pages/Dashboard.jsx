@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { LogOut, Users, MessageSquare, Sparkles, Clock, CheckCircle, Trash2, XCircle, Heart } from 'lucide-react'
+import { LogOut, Users, MessageSquare, Sparkles, Clock, CheckCircle, Trash2, XCircle, Heart, Target } from 'lucide-react'
 import { collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 import { signOut, onAuthStateChanged } from 'firebase/auth'
@@ -101,21 +101,7 @@ const handleApproveVolunteer = async (vol) => {
 };
 
 
-// ✅ 3. Assign Task & Trigger Task Email
-const handleAssignTask = async (vol) => {
-  const taskName = window.prompt(`Assign a mission to ${vol.name}:`);
-  const location = window.prompt(`Enter location for ${vol.name}:`);
 
-  if (taskName && location) {
-    try {
-      await sendTaskAssignmentEmail(vol.email, vol.name, taskName, location);
-      alert(`Mission assigned! Email sent to ${vol.name}`);
-    } catch (err) {
-      console.error("Task assignment failed:", err);
-      alert("Failed to send task email. Check console.");
-    }
-  }
-};
   // ❌ Delete (Reject) Record
   const handleRemoveItem = async (collectionName, id) => {
     if (window.confirm("Are you sure you want to delete this record?")) {
