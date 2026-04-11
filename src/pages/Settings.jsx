@@ -54,7 +54,7 @@ export default function Settings() {
     if (!auth.currentUser?.email) return;
     try {
       await sendPasswordResetEmail(auth, auth.currentUser.email);
-      alert("📧 Password reset link sent to your email!");
+      alert("📧 Password reset link sent to your email!\n\nNote: Please check your Spam folder if you don't see the reset email within 2 minutes.");
     } catch (err) {
       console.error(err);
       alert("❌ Failed to send password reset email.");

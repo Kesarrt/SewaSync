@@ -160,6 +160,10 @@ export default function VolunteerDashboard() {
       setIsUploading(true);
       const base64Image = await convertToBase64(proofFile);
 
+      if (!base64Image || base64Image.length < 100) {
+         throw new Error("Telemetry upload failed. Image payload was corrupt or empty.");
+      }
+
       // 1. Update Task with Image Signature
       await updateDoc(doc(db, 'tasks', selectedTaskForProof.id), {
         status: 'completed',

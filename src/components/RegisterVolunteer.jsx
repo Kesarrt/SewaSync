@@ -73,18 +73,18 @@ export default function RegisterVolunteer() {
 
   if (isSuccess) {
     return (
-      <div className="bg-slate-50 min-h-screen flex items-center justify-center p-6">
-        <div className="bg-white max-w-md w-full p-10 rounded-3xl shadow-xl flex flex-col items-center text-center animate-in fade-in zoom-in duration-500">
-          <div className="bg-green-100 p-6 rounded-full mb-6">
-            <CheckCircle className="text-green-500 w-16 h-16" />
+      <div className="bg-theme-base min-h-screen flex items-center justify-center p-6 transition-colors duration-300">
+        <div className="bg-theme-surface max-w-md w-full p-10 rounded-[2.5rem] shadow-xl flex flex-col items-center text-center animate-in fade-in zoom-in duration-500 border border-slate-100/10">
+          <div className="bg-emerald-500/10 p-6 rounded-full mb-6">
+            <CheckCircle className="text-emerald-500 w-16 h-16" />
           </div>
-          <h2 className="text-2xl font-black text-indigo-900 mb-3">Application Received!</h2>
-          <p className="text-slate-500 leading-relaxed mb-8">
+          <h2 className="text-2xl font-black text-theme-text mb-3">Application Received!</h2>
+          <p className="text-theme-text opacity-70 font-medium leading-relaxed mb-8">
             Thank you for stepping up to help the community. Our administrative team will review your application and get back to you shortly.
           </p>
           <button 
             onClick={() => setIsSuccess(false)}
-            className="w-full bg-indigo-600 text-white font-bold py-4 rounded-3xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/30"
+            className="w-full bg-theme-primary text-white font-black py-4 rounded-2xl hover:brightness-110 transition-colors shadow-lg shadow-theme-primary/30 uppercase tracking-widest text-xs"
           >
             Submit Another
           </button>
@@ -94,111 +94,76 @@ export default function RegisterVolunteer() {
   }
 
   return (
-    <div className="bg-slate-50 min-h-screen flex items-center justify-center p-6 lg:py-16">
-      <div className="bg-white max-w-md w-full p-8 md:p-10 rounded-3xl shadow-xl border border-slate-100">
+    <div className="bg-theme-base min-h-screen flex items-center justify-center p-6 lg:py-16 transition-colors duration-300">
+      <div className="bg-theme-surface max-w-md w-full p-8 md:p-10 rounded-[2.5rem] shadow-xl border border-slate-100/5">
         
         {/* Header Section */}
         <div className="text-center mb-10">
-          <div className="inline-flex bg-indigo-50 p-4 rounded-full mb-4 text-indigo-600">
+          <div className="inline-flex bg-theme-primary/10 p-4 rounded-2xl mb-4 text-theme-primary">
             <Sparkles className="w-8 h-8" />
           </div>
-          <h2 className="text-3xl font-black text-slate-900 mb-2">Join SewaSync</h2>
-          <p className="text-slate-500 text-sm">Sign up as a community volunteer</p>
+          <h2 className="text-3xl font-black text-theme-text mb-2">Join SewaSync</h2>
+          <p className="text-theme-text opacity-50 font-bold uppercase tracking-widest text-[10px]">Sign up as a community volunteer</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-3xl text-sm font-medium border border-red-100 text-center">
+          <div className="mb-6 p-4 bg-red-500/10 text-red-500 rounded-2xl text-sm font-black tracking-wide border border-red-500/20 text-center">
             {error}
           </div>
         )}
 
-        {/* Mobile-First Single-Column Form */}
+        {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           
           <div className="flex flex-col gap-2">
-            <label htmlFor="name" className="text-sm font-bold text-slate-700 ml-2">Full Name</label>
+            <label htmlFor="name" className="text-[10px] uppercase font-black text-theme-text opacity-70 ml-2 tracking-widest">Full Name</label>
             <div className="relative">
               <input 
-                id="name"
-                type="text" 
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                placeholder="Emma Watson"
-                className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-12 pr-4 py-4 rounded-3xl outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all font-medium"
+                id="name" type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="E.g. Emma Watson"
+                className="w-full bg-theme-base border border-slate-200/10 focus:border-theme-primary text-theme-text pl-12 pr-4 py-4 rounded-2xl outline-none focus:ring-4 focus:ring-theme-primary/10 transition-all font-bold"
               />
-              <User className="absolute left-4 top-4 text-slate-400 w-5 h-5" />
+              <User className="absolute left-4 top-4 text-theme-text opacity-40 w-5 h-5" />
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
-            <label htmlFor="email" className="text-sm font-bold text-slate-700 ml-2">Email Address</label>
+            <label htmlFor="email" className="text-[10px] uppercase font-black text-theme-text opacity-70 ml-2 tracking-widest">Email Address</label>
             <div className="relative">
               <input 
-                id="email"
-                type="email" 
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                placeholder="emma@example.com"
-                className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-12 pr-4 py-4 rounded-3xl outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all font-medium"
+                id="email" type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="emma@example.com"
+                className="w-full bg-theme-base border border-slate-200/10 focus:border-theme-primary text-theme-text pl-12 pr-4 py-4 rounded-2xl outline-none focus:ring-4 focus:ring-theme-primary/10 transition-all font-bold"
               />
-              <Mail className="absolute left-4 top-4 text-slate-400 w-5 h-5" />
+              <Mail className="absolute left-4 top-4 text-theme-text opacity-40 w-5 h-5" />
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
-            <label htmlFor="password" className="text-sm font-bold text-slate-700 ml-2">Password</label>
+            <label htmlFor="password" className="text-[10px] uppercase font-black text-theme-text opacity-70 ml-2 tracking-widest">Password</label>
             <div className="relative">
               <input 
-                id="password"
-                type="password" 
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                placeholder="••••••••"
-                className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-12 pr-4 py-4 rounded-3xl outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all font-medium"
+                id="password" type="password" name="password" value={formData.password} onChange={handleChange} required placeholder="••••••••"
+                className="w-full bg-theme-base border border-slate-200/10 focus:border-theme-primary text-theme-text pl-12 pr-4 py-4 rounded-2xl outline-none focus:ring-4 focus:ring-theme-primary/10 transition-all font-bold"
               />
-              <Lock className="absolute left-4 top-4 text-slate-400 w-5 h-5" />
+              <Lock className="absolute left-4 top-4 text-theme-text opacity-40 w-5 h-5" />
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
-            <label htmlFor="location" className="text-sm font-bold text-slate-700 ml-2">City or District Location</label>
+            <label htmlFor="location" className="text-[10px] uppercase font-black text-theme-text opacity-70 ml-2 tracking-widest">Geographical Sector</label>
             <div className="relative">
               <input 
-                id="location"
-                type="text" 
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                required
-                placeholder="North District, Sector 5"
-                className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-12 pr-4 py-4 rounded-3xl outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all font-medium"
+                id="location" type="text" name="location" value={formData.location} onChange={handleChange} required placeholder="North District"
+                className="w-full bg-theme-base border border-slate-200/10 focus:border-theme-primary text-theme-text pl-12 pr-4 py-4 rounded-2xl outline-none focus:ring-4 focus:ring-theme-primary/10 transition-all font-bold"
               />
-              <MapPin className="absolute left-4 top-4 text-slate-400 w-5 h-5" />
+              <MapPin className="absolute left-4 top-4 text-theme-text opacity-40 w-5 h-5" />
             </div>
           </div>
 
           <button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="mt-4 w-full bg-indigo-600 text-white font-bold py-4 rounded-3xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/30 flex justify-center items-center gap-2 disabled:bg-slate-400 disabled:shadow-none"
+            type="submit" disabled={isSubmitting}
+            className="mt-4 w-full bg-theme-primary text-white font-black py-4 rounded-2xl hover:brightness-110 transition-all shadow-lg shadow-theme-primary/30 flex justify-center items-center gap-2 disabled:bg-slate-500 disabled:shadow-none uppercase tracking-widest text-xs"
           >
-            {isSubmitting ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Processing...
-              </>
-            ) : (
-              'Submit Application'
-            )}
+            {isSubmitting ? 'Transmitting Data...' : 'Submit Application'}
           </button>
         </form>
       </div>

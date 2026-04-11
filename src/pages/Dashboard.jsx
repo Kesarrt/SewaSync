@@ -93,18 +93,13 @@ const handleApproveVolunteer = async (vol) => {
 
 
 
-    // 2. Extra safety: Log the data to be sure it's there
-    console.log("Attempting to send email to:", vol.email);
-
     if (vol.email && vol.name) {
       await sendWelcomeEmail(vol.email, vol.name);
       alert(`Success! Email sent to ${vol.email}`);
     } else {
-      console.error("Missing email or name in the volunteer object", vol);
       alert("Database updated, but volunteer data was missing for the email!");
     }
   } catch (err) {
-    console.error("Critical error in approval:", err);
   }
 };
 
@@ -177,21 +172,22 @@ const handleApproveVolunteer = async (vol) => {
     if (now - lastRequestTime < 5000) return;
     setLastRequestTime(now);
 
-    try {
-      setIsGenerating(true);
-      const apiKey = import.meta.env.VITE_GEMINI_KEY;
-      const messagesPrompt = messages.length > 0 ? messages.map(m => `${m.name}: ${m.message}`).join("\n") : "None";
+    const makeRequest = async (isRetry = false) => {
+      try {
+        setIsGenerating(true);
+        const apiKey = import.meta.env.VITE_GEMINI_KEY;
+        const messagesPrompt = messages.length > 0 ? messages.map(m => `${m.name}: ${m.message}`).join("\n") : "None";
 
-      // Note: Using gemini-1.5-flash-latest for 2026 stability
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `Analyze these community messages for an NGO. 
+        // Note: Using gemini-1.5-flash-latest for 2026 stability
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{
+                  text: `Analyze these community messages for an NGO. 
 Return ONLY a raw JSON object.
 
 CRITICAL RULES:
@@ -210,40 +206,47 @@ Format:
 
 Messages to analyze:
 ${messagesPrompt}`
+                }]
               }]
-            }]
-          })
+            })
+          }
+        );
+
+        if (response.status === 429 && !isRetry) {
+           await new Promise(resolve => setTimeout(resolve, 2000));
+           return makeRequest(true);
         }
-      );
 
-      if (!response.ok) throw new Error("API_LIMIT");
+        if (!response.ok) throw new Error("API_LIMIT");
 
-      const data = await response.json();
-      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-      
-      // Robust Cleaning: Remove any markdown backticks, then extract the substring from first '{' to last '}'
-      let cleanText = rawText.replace(/```json|```/gi, "").trim();
-      const startIdx = cleanText.indexOf('{');
-      const endIdx = cleanText.lastIndexOf('}');
-      if (startIdx !== -1 && endIdx !== -1) {
-        cleanText = cleanText.substring(startIdx, endIdx + 1);
-      } else {
-        throw new Error("No JSON object found in response");
+        const data = await response.json();
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+        
+        // Robust Cleaning: Remove any markdown backticks, then extract the substring from first '{' to last '}'
+        let cleanText = rawText.replace(/```json|```/gi, "").trim();
+        const startIdx = cleanText.indexOf('{');
+        const endIdx = cleanText.lastIndexOf('}');
+        if (startIdx !== -1 && endIdx !== -1) {
+          cleanText = cleanText.substring(startIdx, endIdx + 1);
+        } else {
+          throw new Error("No JSON object found in response");
+        }
+
+        setAiResponse(JSON.parse(cleanText));
+
+      } catch (error) {
+        setAiResponse({
+          urgent: messages.filter(m => m.message.toLowerCase().includes("help")).map(m => `${m.name}: urgent help`),
+          help_seekers: [],
+          volunteers: [],
+          actions: ["Error parsing AI response. Review incoming messages manually."]
+        });
+      } finally {
+        setIsGenerating(false);
       }
+    };
 
-      setAiResponse(JSON.parse(cleanText));
-
-    } catch (error) {
-      console.log("⚠️ Fallback Active", error);
-      setAiResponse({
-        urgent: messages.filter(m => m.message.toLowerCase().includes("help")).map(m => `${m.name}: urgent help`),
-        help_seekers: [],
-        volunteers: [],
-        actions: ["Error parsing AI response. Review incoming messages manually."]
-      });
-    } finally {
-      setIsGenerating(false);
-    }
+    makeRequest(false);
   };
 
   return (
@@ -269,7 +272,7 @@ ${messagesPrompt}`
                    </div>
                    <button 
                       onClick={() => updateDoc(doc(db, 'emergencies', sos.id), { status: 'resolved' })}
-                      className="bg-white text-red-600 hover:bg-red-50 font-black px-6 py-3 rounded-xl uppercase tracking-widest text-xs shadow-md transition-all active:scale-95"
+                      className="bg-theme-base text-red-500 hover:bg-theme-text hover:text-theme-base font-black px-6 py-3 rounded-xl uppercase tracking-widest text-xs shadow-md transition-all active:scale-95 border border-red-500/10 hover:border-transparent"
                    >
                      Acknowledge
                    </button>
