@@ -95,9 +95,16 @@ const handleAssignTask = async (vol) => {
     }
   };
 
-  // 🤖 3. AI Strategy Function (Antigravity Engine)
   const generateStrategy = async () => {
-    if (!messages.length) return alert("No messages found!");
+    if (!messages.length) {
+      setAiResponse({
+        urgent: [],
+        help_seekers: [],
+        volunteers: [],
+        actions: ["No data to analyze"]
+      });
+      return;
+    }
 
     const now = Date.now();
     if (now - lastRequestTime < 5000) return;
@@ -117,12 +124,14 @@ const handleAssignTask = async (vol) => {
           body: JSON.stringify({
             contents: [{
               parts: [{
-                text: `Return ONLY JSON:
+                text: `You are an AI insight engine. Analyze the messages and generate a structured report.
+Your response MUST be ONLY a raw JSON object. Do NOT wrap it in backticks. Do NOT include 'json' labels. Do NOT include any conversational text.
+Format strictly as:
 {
-"urgent": [],
-"help_seekers": [],
-"volunteers": [],
-"actions": []
+  "urgent": ["Life-safety or immediate needs"],
+  "help_seekers": ["General requests for aid"],
+  "volunteers": ["People offering help"],
+  "actions": ["Direct instructions for Admin based on messages"]
 }
 
 Messages:
@@ -137,14 +146,26 @@ ${messagesPrompt}`
 
       const data = await response.json();
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-      const cleanText = rawText.replace(/```json|```/g, "").trim();
+      
+      // Robust Cleaning: Remove any markdown backticks, then extract the substring from first '{' to last '}'
+      let cleanText = rawText.replace(/```json|```/gi, "").trim();
+      const startIdx = cleanText.indexOf('{');
+      const endIdx = cleanText.lastIndexOf('}');
+      if (startIdx !== -1 && endIdx !== -1) {
+        cleanText = cleanText.substring(startIdx, endIdx + 1);
+      } else {
+        throw new Error("No JSON object found in response");
+      }
+
       setAiResponse(JSON.parse(cleanText));
 
     } catch (error) {
-      console.log("⚠️ Fallback Active");
+      console.log("⚠️ Fallback Active", error);
       setAiResponse({
         urgent: messages.filter(m => m.message.toLowerCase().includes("help")).map(m => `${m.name}: urgent help`),
-        actions: ["Review incoming messages", "Verify pending volunteers"]
+        help_seekers: [],
+        volunteers: [],
+        actions: ["Error parsing AI response. Review incoming messages manually."]
       });
     } finally {
       setIsGenerating(false);
