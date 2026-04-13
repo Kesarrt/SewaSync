@@ -120,7 +120,7 @@ export default function Dashboard() {
     const makeRequest = async (isRetry = false) => {
       try {
         setIsGenerating(true);
-        const apiKey = "AIzaSyC2XO-kZMArqMEDbi8f4gWD7rME3B1O4qg";
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
         const messagesPrompt = messages.map(m => `${m.name}: ${m.message}`).join("\n");
 
