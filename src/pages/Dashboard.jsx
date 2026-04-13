@@ -14,7 +14,7 @@ export default function Dashboard() {
   const [adminName, setAdminName] = useState('');
   const [volunteers, setVolunteers] = useState([]);
   const [messages, setMessages] = useState([]);
-  const [aiResponse, setAiResponse] = useState(null);
+  const [aiResponse, setAiResponse] = useState({ urgent: [], help_seekers: [], volunteers: [], actions: [] });
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastRequestTime, setLastRequestTime] = useState(0);
 
@@ -66,12 +66,13 @@ export default function Dashboard() {
       setEmergencies(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(e => e.status === 'critical'));
     });
 
-    return () => {
-      unsubVol();
-      unsubMsg();
-      unsubWork();
-      unsubEmergencies();
+    const unsubscribe = () => {
+      if (unsubVol) unsubVol();
+      if (unsubMsg) unsubMsg();
+      if (unsubWork) unsubWork();
+      if (unsubEmergencies) unsubEmergencies();
     };
+    return () => unsubscribe();
   }, []);
 
   // 🔐 Logout Logic
@@ -175,36 +176,29 @@ const handleApproveVolunteer = async (vol) => {
     const makeRequest = async (isRetry = false) => {
       try {
         setIsGenerating(true);
-        const apiKey = import.meta.env.VITE_GEMINI_KEY;
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
         const messagesPrompt = messages.length > 0 ? messages.map(m => `${m.name}: ${m.message}`).join("\n") : "None";
 
-        // Note: Using gemini-1.5-flash-latest for 2026 stability
+        // Note: Using gemini-1.5-flash for 2026 stability
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               contents: [{
                 parts: [{
-                  text: `Analyze these community messages for an NGO. 
-Return ONLY a raw JSON object.
+                  text: `Classify NGO messages. Return ONLY raw JSON object.
+Categories:
+URGENT: life/safety threats.
+HELP_SEEKERS: resource needs.
+VOLUNTEERS: offering to join/help.
+ACTIONS: 2-3 brief admin steps.
 
-CRITICAL RULES:
-1. "volunteers": Include anyone saying they want to join, help, work with us, or offering skills.
-2. "urgent": Include immediate needs like "urgently", "emergency", "flood", "starving".
-3. "help_seekers": Include general requests for food, clothes, or info.
-4. "actions": Suggest 2-3 specific steps the Admin should take.
+Rules: "want to be volunteer" -> volunteers. No urgent keywords -> NOT urgent. Keep exact original text.
 
-Format:
-{
-  "urgent": [],
-  "help_seekers": [],
-  "volunteers": [],
-  "actions": []
-}
-
-Messages to analyze:
+Format: {"urgent":[], "help_seekers":[], "volunteers":[], "actions":[]}
+Messages:
 ${messagesPrompt}`
                 }]
               }]
@@ -222,24 +216,54 @@ ${messagesPrompt}`
         const data = await response.json();
         const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
         
-        // Robust Cleaning: Remove any markdown backticks, then extract the substring from first '{' to last '}'
-        let cleanText = rawText.replace(/```json|```/gi, "").trim();
-        const startIdx = cleanText.indexOf('{');
-        const endIdx = cleanText.lastIndexOf('}');
-        if (startIdx !== -1 && endIdx !== -1) {
-          cleanText = cleanText.substring(startIdx, endIdx + 1);
-        } else {
+        // Robust Cleaning: Extract only the JSON content using Regex
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
           throw new Error("No JSON object found in response");
         }
 
-        setAiResponse(JSON.parse(cleanText));
+        try {
+          const parsedData = JSON.parse(jsonMatch[0]);
+          setAiResponse({
+            urgent: parsedData.urgent || [],
+            help_seekers: parsedData.help_seekers || [],
+            volunteers: parsedData.volunteers || [],
+            actions: [
+              "✅ Status: AI Analysis Complete (Gemini 1.5 Flash)",
+              ...(parsedData.actions || [])
+            ]
+          });
+        } catch (parseError) {
+          throw new Error("JSON Parse Error: " + parseError.message);
+        }
 
       } catch (error) {
+        console.error("AI Generation Error:", error);
+        
+        // Local Triage Fallback
+        const urgent = [];
+        const volunteers = [];
+        const help_seekers = [];
+        
+        messages.forEach(m => {
+          const text = m.message.toLowerCase();
+          if (text.includes('urgent') || text.includes('blood') || text.includes('accident') || text.includes('emergency')) {
+            urgent.push(`"${m.message}" - ${m.name}`);
+          } else if (text.includes('volunteer') || text.includes('join') || text.includes('help your ngo')) {
+            volunteers.push(`"${m.message}" - ${m.name}`);
+          } else {
+            help_seekers.push(`"${m.message}" - ${m.name}`);
+          }
+        });
+
         setAiResponse({
-          urgent: messages.filter(m => m.message.toLowerCase().includes("help")).map(m => `${m.name}: urgent help`),
-          help_seekers: [],
-          volunteers: [],
-          actions: ["Error parsing AI response. Review incoming messages manually."]
+          urgent,
+          help_seekers,
+          volunteers,
+          actions: [
+            "⚠️ MANUAL LOCAL TRIAGE",
+            "AI offline. Messages auto-sorted locally based on keywords."
+          ]
         });
       } finally {
         setIsGenerating(false);
@@ -310,7 +334,12 @@ ${messagesPrompt}`
       </div>
 
       {/* 🤖 AI STRATEGY CARDS */}
-      {aiResponse && (
+      {isGenerating ? (
+        <div className="flex flex-col items-center justify-center py-16 mb-8 bg-indigo-50/50 rounded-3xl border border-indigo-100 shadow-sm animate-pulse">
+           <Sparkles className="text-indigo-500 mb-4 animate-spin" size={32} />
+           <p className="text-indigo-800 font-black tracking-widest uppercase text-xs">Scanning messages with AI...</p>
+        </div>
+      ) : aiResponse && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="bg-red-50 p-5 border-l-4 border-red-500 rounded-2xl">
             <h3 className="font-black text-[10px] text-red-600 uppercase tracking-widest mb-2">🚨 Urgent</h3>
