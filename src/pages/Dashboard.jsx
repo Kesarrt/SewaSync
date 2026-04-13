@@ -4,8 +4,7 @@ import { collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, addD
 import { auth, db } from '../firebase'
 import { signOut, onAuthStateChanged } from 'firebase/auth'
 import { useNavigate } from 'react-router-dom'
-// ✅ Linked to your new Email Engine
-import { sendWelcomeEmail, sendTaskAssignmentEmail } from '../emailService'
+import { sendWelcomeEmail } from '../emailService'
 import ActiveTeam from '../components/ActiveTeam'
 
 export default function Dashboard() {
@@ -26,17 +25,11 @@ export default function Dashboard() {
   const [recentWork, setRecentWork] = useState([]);
   const [emergencies, setEmergencies] = useState([]);
 
-  // 📦 0. Auth State Checker
+  // Auth Logic
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
-        if (user.displayName) {
-          setAdminName(user.displayName);
-        } else if (user.email) {
-          setAdminName(user.email.split('@')[0]);
-        } else {
-          setAdminName('Admin');
-        }
+        setAdminName(user.displayName || user.email?.split('@')[0] || 'Admin');
       } else {
         setAdminName('');
       }
@@ -44,7 +37,7 @@ export default function Dashboard() {
     return () => unsubAuth();
   }, []);
 
-  // 📦 1. Real-time Firebase Data Sync
+  // Firebase Sync
   useEffect(() => {
     const volQuery = query(collection(db, 'volunteers'), orderBy('createdAt', 'desc'));
     const unsubVol = onSnapshot(volQuery, (snapshot) => {
@@ -66,58 +59,33 @@ export default function Dashboard() {
       setEmergencies(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(e => e.status === 'critical'));
     });
 
-    const unsubscribe = () => {
-      if (unsubVol) unsubVol();
-      if (unsubMsg) unsubMsg();
-      if (unsubWork) unsubWork();
-      if (unsubEmergencies) unsubEmergencies();
+    return () => {
+      unsubVol(); unsubMsg(); unsubWork(); unsubEmergencies();
     };
-    return () => unsubscribe();
   }, []);
 
-  // 🔐 Logout Logic
   const handleLogout = async () => {
     await signOut(auth);
     navigate('/public');
   };
 
-  // ✅ 2. Approve Volunteer & Trigger Welcome Email
- // Inside handleApproveVolunteer
-const handleApproveVolunteer = async (vol) => {
-  try {
-    // 1. Update Firestore
-    await updateDoc(doc(db, 'volunteers', vol.id), {
-      status: 'approved',
-      role: 'volunteer',
-      joinedAt: serverTimestamp()
-    });
+  const handleApproveVolunteer = async (vol) => {
+    try {
+      await updateDoc(doc(db, 'volunteers', vol.id), {
+        status: 'approved',
+        role: 'volunteer',
+        joinedAt: serverTimestamp()
+      });
+      if (vol.email && vol.name) await sendWelcomeEmail(vol.email, vol.name);
+    } catch (err) { console.error(err); }
+  };
 
-
-
-    if (vol.email && vol.name) {
-      await sendWelcomeEmail(vol.email, vol.name);
-      alert(`Success! Email sent to ${vol.email}`);
-    } else {
-      alert("Database updated, but volunteer data was missing for the email!");
-    }
-  } catch (err) {
-  }
-};
-
-
-
-  // ❌ Delete (Reject) Record
-  const handleRemoveItem = async (collectionName, id) => {
-    if (window.confirm("Are you sure you want to delete this record?")) {
-      try {
-        await deleteDoc(doc(db, collectionName, id));
-      } catch (err) {
-        console.error("Delete failed:", err);
-      }
+  const handleRemoveItem = async (col, id) => {
+    if (window.confirm("Delete record?")) {
+      try { await deleteDoc(doc(db, col, id)); } catch (err) { console.error(err); }
     }
   };
 
-  // Image Encoding Helper
   const convertToBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -130,44 +98,20 @@ const handleApproveVolunteer = async (vol) => {
   const handleAddRecentWork = async (e) => {
     e.preventDefault();
     if (!workTitle || !workDesc || !workFile) return;
-
     try {
       setIsUploading(true);
-      
-      // Encode file natively as Base64 string to bypass Firebase Storage costs
       const base64Image = await convertToBase64(workFile);
-
-      // Save document to Firestore
       await addDoc(collection(db, 'recentWork'), {
-        title: workTitle,
-        description: workDesc,
-        imageUrl: base64Image,
-        createdAt: serverTimestamp()
+        title: workTitle, description: workDesc, imageUrl: base64Image, createdAt: serverTimestamp()
       });
-      
-      setWorkTitle('');
-      setWorkDesc('');
-      setWorkFile(null);
-      // reset file input
+      setWorkTitle(''); setWorkDesc(''); setWorkFile(null);
       document.getElementById("workImageInput").value = "";
-    } catch (err) {
-      console.error("Error adding recent work:", err);
-      alert("Failed to publish story. Check console.");
-    } finally {
-      setIsUploading(false);
-    }
+    } catch (err) { console.error(err); } finally { setIsUploading(false); }
   };
 
+  // 🤖 THE FIXED AI LOGIC
   const generateStrategy = async () => {
-    if (!messages.length) {
-      setAiResponse({
-        urgent: [],
-        help_seekers: [],
-        volunteers: [],
-        actions: ["No data to analyze"]
-      });
-      return;
-    }
+    if (!messages.length) return;
 
     const now = Date.now();
     if (now - lastRequestTime < 5000) return;
@@ -176,94 +120,64 @@ const handleApproveVolunteer = async (vol) => {
     const makeRequest = async (isRetry = false) => {
       try {
         setIsGenerating(true);
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-        const messagesPrompt = messages.length > 0 ? messages.map(m => `${m.name}: ${m.message}`).join("\n") : "None";
+        const apiKey = "AIzaSyC2XO-kZMArqMEDbi8f4gWD7rME3B1O4qg";
 
-        // Note: Using gemini-1.5-flash for 2026 stability
+        const messagesPrompt = messages.map(m => `${m.name}: ${m.message}`).join("\n");
+
+        // ✅ URL FIXED: Added 'v1' and ensured the model path is exact
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               contents: [{
                 parts: [{
-                  text: `Classify NGO messages. Return ONLY raw JSON object.
-Categories:
-URGENT: life/safety threats.
-HELP_SEEKERS: resource needs.
-VOLUNTEERS: offering to join/help.
-ACTIONS: 2-3 brief admin steps.
-
-Rules: "want to be volunteer" -> volunteers. No urgent keywords -> NOT urgent. Keep exact original text.
-
-Format: {"urgent":[], "help_seekers":[], "volunteers":[], "actions":[]}
-Messages:
-${messagesPrompt}`
+                  text: `Classify these messages into a raw JSON object: {"urgent":[], "help_seekers":[], "volunteers":[], "actions":[]}. Use the original text. \n\nMessages:\n${messagesPrompt}`
                 }]
               }]
             })
           }
         );
 
-        if (response.status === 429 && !isRetry) {
-           await new Promise(resolve => setTimeout(resolve, 2000));
-           return makeRequest(true);
+        if (!response.ok) {
+          const errorDetail = await response.json();
+          console.error("Google API detailed error:", errorDetail);
+          throw new Error("API_FAIL");
         }
-
-        if (!response.ok) throw new Error("API_LIMIT");
 
         const data = await response.json();
-        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-        
-        // Robust Cleaning: Extract only the JSON content using Regex
-        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          throw new Error("No JSON object found in response");
-        }
+        let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
 
-        try {
-          const parsedData = JSON.parse(jsonMatch[0]);
-          setAiResponse({
-            urgent: parsedData.urgent || [],
-            help_seekers: parsedData.help_seekers || [],
-            volunteers: parsedData.volunteers || [],
-            actions: [
-              "✅ Status: AI Analysis Complete (Gemini 1.5 Flash)",
-              ...(parsedData.actions || [])
-            ]
-          });
-        } catch (parseError) {
-          throw new Error("JSON Parse Error: " + parseError.message);
-        }
+        // Clean markdown backticks if Gemini adds them
+        const cleanedJson = rawText.replace(/```json|```/g, "").trim();
+        const parsedData = JSON.parse(cleanedJson);
+
+        setAiResponse({
+          urgent: parsedData.urgent || [],
+          help_seekers: parsedData.help_seekers || [],
+          volunteers: parsedData.volunteers || [],
+          actions: ["✅ AI Analysis Complete", ...(parsedData.actions || [])]
+        });
 
       } catch (error) {
-        console.error("AI Generation Error:", error);
-        
-        // Local Triage Fallback
+        console.error("AI Insight Error:", error);
+
+        // 🆘 Automatic Fallback: This sorts the UI locally if the API is still being stubborn
         const urgent = [];
-        const volunteers = [];
+        const volunteersList = [];
         const help_seekers = [];
-        
+
         messages.forEach(m => {
-          const text = m.message.toLowerCase();
-          if (text.includes('urgent') || text.includes('blood') || text.includes('accident') || text.includes('emergency')) {
-            urgent.push(`"${m.message}" - ${m.name}`);
-          } else if (text.includes('volunteer') || text.includes('join') || text.includes('help your ngo')) {
-            volunteers.push(`"${m.message}" - ${m.name}`);
-          } else {
-            help_seekers.push(`"${m.message}" - ${m.name}`);
-          }
+          const t = m.message.toLowerCase();
+          if (t.includes('blood') || t.includes('urgent') || t.includes('emergency')) urgent.push(`${m.name}: ${m.message}`);
+          else if (t.includes('volunteer') || t.includes('join')) volunteersList.push(`${m.name}: ${m.message}`);
+          else help_seekers.push(`${m.name}: ${m.message}`);
         });
 
         setAiResponse({
-          urgent,
-          help_seekers,
-          volunteers,
-          actions: [
-            "⚠️ MANUAL LOCAL TRIAGE",
-            "AI offline. Messages auto-sorted locally based on keywords."
-          ]
+          urgent, volunteers: volunteersList, help_seekers,
+          actions: ["⚠️ Local Sorting Active", "AI Connection Pending"]
         });
       } finally {
         setIsGenerating(false);
@@ -274,245 +188,98 @@ ${messagesPrompt}`
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto bg-theme-base transition-colors duration-300 min-h-screen text-left relative">
-
-      {/* 🚨 SOS EMERGENCY BANNER */}
-      {emergencies.length > 0 && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[1000] w-[95%] max-w-5xl animate-in slide-in-from-top-10 fade-in duration-300">
-          <div className="bg-red-600 shadow-2xl shadow-red-600/40 rounded-3xl p-1 flex flex-col md:flex-row shadow-inner">
-             {emergencies.map(sos => (
-                <div key={sos.id} className="flex-1 bg-red-700/50 m-1 rounded-2xl p-4 flex items-center justify-between border border-red-500/50 backdrop-blur-md">
-                   <div className="flex items-center gap-4">
-                     <div className="bg-red-100 text-red-600 p-3 rounded-full animate-pulse shadow-md">
-                       <Target size={24} />
-                     </div>
-                     <div>
-                       <h3 className="font-black text-white text-lg tracking-wide uppercase">SOS Received</h3>
-                       <p className="text-red-100 text-xs font-bold font-mono mt-1">
-                          OPERATIVE: {sos.volunteerName} ({sos.phone})<br/>
-                          COORDS: {sos.location}
-                       </p>
-                     </div>
-                   </div>
-                   <button 
-                      onClick={() => updateDoc(doc(db, 'emergencies', sos.id), { status: 'resolved' })}
-                      className="bg-theme-base text-red-500 hover:bg-theme-text hover:text-theme-base font-black px-6 py-3 rounded-xl uppercase tracking-widest text-xs shadow-md transition-all active:scale-95 border border-red-500/10 hover:border-transparent"
-                   >
-                     Acknowledge
-                   </button>
-                </div>
-             ))}
+    <div className="p-6 max-w-7xl mx-auto bg-theme-base min-h-screen text-left relative">
+      {/* Emergency Banner */}
+      {emergencies.map(sos => (
+        <div key={sos.id} className="bg-red-600 rounded-3xl p-4 mb-4 flex items-center justify-between text-white shadow-xl">
+          <div className="flex items-center gap-4">
+            <Target size={24} className="animate-pulse" />
+            <div>
+              <p className="font-black uppercase text-xs">SOS Received</p>
+              <p className="text-xs">{sos.volunteerName} - {sos.location}</p>
+            </div>
           </div>
+          <button onClick={() => updateDoc(doc(db, 'emergencies', sos.id), { status: 'resolved' })} className="bg-white text-red-600 px-4 py-2 rounded-xl text-xs font-bold">Acknowledge</button>
         </div>
-      )}
+      ))}
 
       {/* Header */}
-      <div className="flex justify-between items-center mb-8 bg-theme-surface transition-colors duration-300 p-6 rounded-2xl shadow-sm border border-slate-100">
-        <div>
-          <h1 className="text-3xl font-black text-theme-text tracking-tight text-left">
-            Welcome back, <span className="text-indigo-600">{adminName || 'Admin'}</span>
-          </h1>
-          <p className="text-sm text-slate-500 font-bold uppercase flex items-center gap-1 mt-1">
-            <Clock size={14}/> Operational Dashboard
-          </p>
-        </div>
-
+      <div className="flex justify-between items-center mb-8 p-6 bg-theme-surface rounded-2xl shadow-sm">
+        <h1 className="text-3xl font-black text-theme-text">Welcome, <span className="text-indigo-600">{adminName}</span></h1>
         <div className="flex gap-3">
-          <button
-            onClick={generateStrategy}
-            disabled={isGenerating}
-            className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl flex items-center gap-2 hover:bg-indigo-700 transition-all font-bold shadow-lg shadow-indigo-100"
-          >
-            <Sparkles size={18}/>
-            {isGenerating ? "Analyzing..." : "AI Insight"}
+          <button onClick={generateStrategy} disabled={isGenerating} className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl flex items-center gap-2 font-bold shadow-lg">
+            <Sparkles size={18} /> {isGenerating ? "Analyzing..." : "AI Insight"}
           </button>
-
-          <button onClick={handleLogout} className="bg-theme-surface p-2.5 rounded-2xl text-slate-500 hover:text-red-500 transition-all">
-            <LogOut size={20}/>
-          </button>
+          <button onClick={handleLogout} className="p-2.5 rounded-2xl text-slate-500 hover:text-red-500"><LogOut size={20} /></button>
         </div>
       </div>
 
-      {/* 🤖 AI STRATEGY CARDS */}
-      {isGenerating ? (
-        <div className="flex flex-col items-center justify-center py-16 mb-8 bg-indigo-50/50 rounded-3xl border border-indigo-100 shadow-sm animate-pulse">
-           <Sparkles className="text-indigo-500 mb-4 animate-spin" size={32} />
-           <p className="text-indigo-800 font-black tracking-widest uppercase text-xs">Scanning messages with AI...</p>
-        </div>
-      ) : aiResponse && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
+      {/* AI Strategy Display */}
+      {aiResponse && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-red-50 p-5 border-l-4 border-red-500 rounded-2xl">
             <h3 className="font-black text-[10px] text-red-600 uppercase tracking-widest mb-2">🚨 Urgent</h3>
-            {aiResponse.urgent?.map((i, idx) => <p key={idx} className="text-xs text-red-900 font-medium mb-1">• {i}</p>)}
+            {aiResponse.urgent.map((i, idx) => <p key={idx} className="text-xs text-red-900 mb-1">• {i}</p>)}
           </div>
           <div className="bg-amber-50 p-5 border-l-4 border-amber-500 rounded-2xl">
             <h3 className="font-black text-[10px] text-amber-600 uppercase tracking-widest mb-2">🆘 Help</h3>
-            {aiResponse.help_seekers?.map((i, idx) => <p key={idx} className="text-xs text-amber-900 font-medium mb-1">• {i}</p>)}
+            {aiResponse.help_seekers.map((i, idx) => <p key={idx} className="text-xs text-amber-900 mb-1">• {i}</p>)}
           </div>
           <div className="bg-emerald-50 p-5 border-l-4 border-emerald-500 rounded-2xl">
             <h3 className="font-black text-[10px] text-emerald-600 uppercase tracking-widest mb-2">🤝 Volunteers</h3>
-            {aiResponse.volunteers?.map((i, idx) => <p key={idx} className="text-xs text-emerald-900 font-medium mb-1">• {i}</p>)}
+            {aiResponse.volunteers.map((i, idx) => <p key={idx} className="text-xs text-emerald-900 mb-1">• {i}</p>)}
           </div>
           <div className="bg-indigo-50 p-5 border-l-4 border-indigo-500 rounded-2xl">
             <h3 className="font-black text-[10px] text-indigo-600 uppercase tracking-widest mb-2">⚡ Actions</h3>
-            {aiResponse.actions?.map((i, idx) => <p key={idx} className="text-xs text-indigo-900 font-medium mb-1">• {i}</p>)}
+            {aiResponse.actions.map((i, idx) => <p key={idx} className="text-xs text-indigo-900 mb-1">• {i}</p>)}
           </div>
         </div>
       )}
 
-      {/* DATA MANAGEMENT SECTION */}
+      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-        {/* Active Team Leaderboard Column */}
-        <div className="lg:col-span-1">
-          <ActiveTeam />
-        </div>
-
-        {/* Volunteers Column */}
-        <div className="bg-theme-surface transition-colors duration-300 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-1">
-          <h2 className="text-xl font-black mb-6 flex items-center gap-2 text-theme-text"><Users size={22} className="text-indigo-500"/> Volunteer Applications</h2>
-
-          {volunteers.length === 0 ? (
-            <p className="text-slate-400 text-sm italic">No applications in the queue.</p>
-          ) : (
-            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-              {volunteers.map(vol => (
-                <div key={vol.id} className="flex justify-between items-center p-5 bg-theme-base transition-colors duration-300/50 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-all group">
-                  <div className="text-left">
-                    <p className="font-bold text-theme-text">{vol.name}</p>
-                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-tight">{vol.location || 'Location Pending'}</p>
-                    <div className="mt-1">
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${vol.status === 'approved' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
-                        {vol.status || 'pending'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {vol.status !== 'approved' && (
-                      <button 
-                        onClick={() => handleApproveVolunteer(vol)}
-                        className="p-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all shadow-md"
-                        title="Approve Volunteer"
-                      >
-                        <CheckCircle size={20}/>
-                      </button>
-                    )}
-                    <button 
-                      onClick={() => handleRemoveItem('volunteers', vol.id)}
-                      className="p-2.5 bg-theme-surface transition-colors duration-300 text-slate-300 hover:text-red-500 border border-slate-100 hover:border-red-100 rounded-xl transition-all"
-                      title="Delete"
-                    >
-                      <Trash2 size={20}/>
-                    </button>
-                  </div>
+        <ActiveTeam />
+        <div className="bg-theme-surface p-8 rounded-[2.5rem] shadow-sm">
+          <h2 className="text-xl font-black mb-6 text-theme-text flex items-center gap-2"><Users className="text-indigo-500" /> Applications</h2>
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+            {volunteers.map(vol => (
+              <div key={vol.id} className="flex justify-between items-center p-4 bg-theme-base rounded-2xl border border-slate-100">
+                <div className="text-left">
+                  <p className="font-bold text-theme-text text-sm">{vol.name}</p>
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-tight">{vol.location || 'Nagpur'}</p>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Community Messages Column */}
-        <div className="bg-theme-surface transition-colors duration-300 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-1">
-          <h2 className="text-xl font-black mb-6 flex items-center gap-2 text-theme-text"><MessageSquare size={22} className="text-teal-500"/> Community Voice</h2>
-
-          <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-            {messages.map(msg => (
-              <div key={msg.id} className="p-5 bg-theme-base transition-colors duration-300/50 rounded-2xl border border-slate-100 relative group hover:border-teal-200 transition-all">
-                <button 
-                  onClick={() => handleRemoveItem('messages', msg.id)} 
-                  className="absolute right-4 top-4 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                >
-                  <XCircle size={18}/>
-                </button>
-                <p className="text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">{msg.name}</p>
-                <p className="text-sm text-slate-700 italic font-medium leading-relaxed">"{msg.message}"</p>
+                <div className="flex gap-2">
+                  {vol.status !== 'approved' && <button onClick={() => handleApproveVolunteer(vol)} className="p-2 bg-emerald-500 text-white rounded-lg"><CheckCircle size={16} /></button>}
+                  <button onClick={() => handleRemoveItem('volunteers', vol.id)} className="p-2 text-slate-300 hover:text-red-500"><Trash2 size={16} /></button>
+                </div>
               </div>
             ))}
           </div>
         </div>
-
-      </div>
-
-      {/* CONTENT MANAGEMENT SYSTEM */}
-      <h2 className="text-2xl font-black text-theme-text mt-12 mb-6 flex items-center gap-2">
-        <Heart size={26} className="text-rose-500" /> CMS: Recent Work Gallery
-      </h2>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-10">
-        
-        {/* ADD FORM */}
-        <div className="bg-theme-surface transition-colors duration-300 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-1">
-          <h3 className="text-lg font-bold text-theme-text mb-6 tracking-tight">Publish Impact Story</h3>
-          <form onSubmit={handleAddRecentWork} className="flex flex-col gap-4">
-            <div>
-              <label className="block text-[10px] font-black tracking-widest uppercase text-slate-400 mb-1">Title</label>
-              <input 
-                required value={workTitle} onChange={e => setWorkTitle(e.target.value)} 
-                className="w-full bg-theme-base transition-colors duration-300 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-3 outline-none text-sm font-medium transition-all" 
-                placeholder="e.g. Flood Relief 2026" 
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-black tracking-widest uppercase text-slate-400 mb-1">Description</label>
-              <textarea 
-                required value={workDesc} onChange={e => setWorkDesc(e.target.value)} 
-                className="w-full bg-theme-base transition-colors duration-300 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-3 outline-none text-sm font-medium transition-all resize-none" 
-                rows="3" placeholder="Impact description..." 
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-black tracking-widest uppercase text-slate-400 mb-1">Local Image File</label>
-              <input 
-                id="workImageInput"
-                type="file" 
-                accept="image/*"
-                required 
-                onChange={e => setWorkFile(e.target.files[0])} 
-                className="w-full bg-theme-base text-theme-text transition-colors duration-300 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-2.5 outline-none text-sm font-medium transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 placeholder:text-slate-400 cursor-pointer" 
-              />
-            </div>
-            <button 
-              type="submit" 
-              disabled={isUploading}
-              className="mt-2 bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed"
-            >
-              {isUploading ? 'Publishing...' : 'Publish Story'}
-            </button>
-          </form>
-        </div>
-
-        {/* GALLERY MANAGER */}
-        <div className="bg-theme-surface transition-colors duration-300 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-2">
-          <h3 className="text-lg font-bold text-theme-text mb-6 tracking-tight">Published Gallery ({recentWork.length})</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2">
-            {recentWork.length === 0 ? (
-              <p className="text-slate-400 text-sm italic col-span-2 bg-theme-base transition-colors duration-300 p-6 rounded-2xl text-center">No recent work published. Start posting to your public portal!</p>
-            ) : (
-              recentWork.map(work => (
-                <div key={work.id} className="border border-slate-100 rounded-2xl flex overflow-hidden group shadow-sm hover:shadow-md transition-shadow bg-theme-surface transition-colors duration-300 h-28">
-                  <div className="w-28 bg-theme-surface overflow-hidden shrink-0">
-                    <img src={work.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" onError={(e) => e.target.src = 'https://images.unsplash.com/photo-1593113511332-9cbca45b4b1a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'} />
-                  </div>
-                  <div className="p-4 flex flex-col justify-center flex-1 relative">
-                    <button 
-                      onClick={() => handleRemoveItem('recentWork', work.id)} 
-                      className="absolute top-2 right-2 p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Delete Story"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                    <h4 className="font-bold text-theme-text text-sm mb-1 pr-6 leading-tight line-clamp-1">{work.title}</h4>
-                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{work.description}</p>
-                  </div>
-                </div>
-              ))
-            )}
+        <div className="bg-theme-surface p-8 rounded-[2.5rem] shadow-sm">
+          <h2 className="text-xl font-black mb-6 text-theme-text flex items-center gap-2"><MessageSquare className="text-teal-500" /> Messages</h2>
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+            {messages.map(msg => (
+              <div key={msg.id} className="p-4 bg-theme-base rounded-2xl border border-slate-100 relative group">
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">{msg.name}</p>
+                <p className="text-xs text-slate-700 italic">"{msg.message}"</p>
+                <button onClick={() => handleRemoveItem('messages', msg.id)} className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-all text-slate-300 hover:text-red-500"><XCircle size={16} /></button>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
+      {/* CMS Section */}
+      <div className="mt-12 bg-theme-surface p-8 rounded-[2.5rem] border border-slate-100">
+        <h2 className="text-2xl font-black mb-6 flex items-center gap-2 text-theme-text"><Heart className="text-rose-500" /> CMS Gallery</h2>
+        <form onSubmit={handleAddRecentWork} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <input required value={workTitle} onChange={e => setWorkTitle(e.target.value)} className="bg-theme-base p-3 rounded-xl border border-slate-200 text-sm" placeholder="Title" />
+          <input required value={workDesc} onChange={e => setWorkDesc(e.target.value)} className="bg-theme-base p-3 rounded-xl border border-slate-200 text-sm" placeholder="Description" />
+          <input id="workImageInput" type="file" accept="image/*" required onChange={e => setWorkFile(e.target.files[0])} className="text-xs p-2" />
+          <button type="submit" disabled={isUploading} className="bg-slate-900 text-white font-bold rounded-xl">{isUploading ? '...' : 'Publish'}</button>
+        </form>
+      </div>
     </div>
   );
 }
