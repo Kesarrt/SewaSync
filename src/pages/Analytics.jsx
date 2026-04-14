@@ -167,7 +167,7 @@ export default function Analytics() {
                 <PieIcon className="text-indigo-500" size={20} /> Mission Categorization
              </h2>
              
-             <div className="h-64 w-full">
+             <div className="h-[300px] w-full">
                 {categoryData.length > 0 ? (
                    <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
@@ -210,7 +210,7 @@ export default function Analytics() {
                 <MapPin className="text-teal-500" size={20} /> Ops Geolocation
              </h2>
              
-             <div className="h-72 w-full">
+             <div className="h-[300px] w-full">
                 {locationData.length > 0 ? (
                    <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={locationData} maxBarSize={40}>
@@ -241,7 +241,7 @@ export default function Analytics() {
               <TrendingUp className="text-rose-500" size={20} /> Timeline Execution Trend
            </h2>
 
-           <div className="h-80 w-full">
+           <div className="h-[300px] w-full">
               {trendData.length > 0 ? (
                  <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={trendData}>

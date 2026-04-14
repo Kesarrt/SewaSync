@@ -62,26 +62,33 @@ export default function Tasks() {
     
     try {
       // Find the selected volunteer to get their email
-      const selectedVol = volunteers.find(v => v.name === formData.assignedTo);
-      const assignedEmail = selectedVol ? selectedVol.email : null;
+      const selectedOperative = formData.assignedTo;
+      const selectedVol = selectedOperative ? volunteers.find(v => v.name === selectedOperative) : null;
+      const volunteerEmail = selectedVol?.email?.trim() || null;
+
+      // Only block if they deliberately selected a volunteer, but that volunteer lacks an email.
+      if (selectedOperative && selectedOperative !== 'Open / Unassigned' && !volunteerEmail) {
+        alert('Please assign a volunteer with a valid email first');
+        setIsSubmitting(false);
+        return;
+      }
 
       await addDoc(collection(db, 'tasks'), {
         title: formData.title,
         description: formData.description,
-        points: Number(formData.points) || 10, // default 10 points
-        location: formData.subArea, // CRITICAL: Save subArea as geospatial reference
-        assignedTo: formData.assignedTo || 'Unassigned',
-        assignedToEmail: assignedEmail,
+        points: Number(formData.points) || 10,
+        location: formData.subArea,
+        assignedTo: selectedOperative || 'Unassigned',
+        assignedToEmail: volunteerEmail,
         assignedToName: selectedVol?.name || 'Unassigned',
         status: 'pending',
         createdAt: serverTimestamp()
       });
       
-      // Trigger EmailJS notification if a volunteer was assigned
-      if (selectedVol && assignedEmail) {
+      if (selectedOperative && selectedOperative !== 'Open / Unassigned' && volunteerEmail) {
         try {
           await sendTaskAssignmentEmail(
-            assignedEmail,
+            volunteerEmail,
             selectedVol.name,
             formData.title,
             formData.subArea
@@ -89,6 +96,8 @@ export default function Tasks() {
         } catch (emailError) {
           console.error("Failed to send task assignment email:", emailError);
         }
+      } else {
+        console.log("Task saved. Skipping email because no operative was assigned.");
       }
 
       // Reset form strictly keeping area defaults

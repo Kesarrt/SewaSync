@@ -87,18 +87,56 @@ export default function VolunteerDashboard() {
   useEffect(() => {
     if (!user?.email || !volunteerDoc?.profileCompleted) return;
 
-    const q = query(
+    const qSelf = query(
       collection(db, 'tasks'),
       where('assignedToEmail', '==', user.email),
       where('status', '==', 'pending')
     );
 
-    const unsubscribeTasks = onSnapshot(q, (snapshot) => {
-      setTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    const qUnassigned = query(
+      collection(db, 'tasks'),
+      where('assignedTo', '==', 'Unassigned'),
+      where('status', '==', 'pending')
+    );
+
+    let selfTasks = [];
+    let unassignedTasks = [];
+
+    const updateTasks = () => {
+      const all = [...selfTasks, ...unassignedTasks];
+      all.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      setTasks(all);
+    };
+
+    const unsubSelf = onSnapshot(qSelf, (snapshot) => {
+      selfTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      updateTasks();
     });
 
-    return () => unsubscribeTasks();
+    const unsubUnassigned = onSnapshot(qUnassigned, (snapshot) => {
+      unassignedTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      updateTasks();
+    });
+
+    return () => {
+      unsubSelf();
+      unsubUnassigned();
+    };
   }, [user, volunteerDoc?.profileCompleted]);
+
+  const handleClaimMission = async (task) => {
+    if (!window.confirm(`Are you sure you want to claim "${task.title}"?`)) return;
+    try {
+      await updateDoc(doc(db, 'tasks', task.id), {
+        assignedTo: volunteerDoc.name || 'Operative',
+        assignedToName: volunteerDoc.name || 'Operative',
+        assignedToEmail: user.email
+      });
+    } catch (err) {
+      console.error("Error claiming mission:", err);
+      alert("Failed to claim mission. Someone else might have already taken it!");
+    }
+  };
 
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
@@ -368,12 +406,21 @@ export default function VolunteerDashboard() {
                         {task.description || "You have been assigned to this mission. Please coordinate with the team leader for further action details."}
                       </p>
 
-                      <button
-                        onClick={() => setSelectedTaskForProof(task)}
-                        className="w-full bg-theme-base transition-colors duration-300 hover:bg-theme-text text-theme-text opacity-70 hover:opacity-100 hover:text-theme-base font-black py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 border border-slate-200/10 hover:border-transparent group/btn uppercase tracking-widest text-[10px]"
-                      >
-                        <Camera size={16} className="text-theme-primary group-hover/btn:text-theme-base" /> Initiate Verification
-                      </button>
+                      {task.assignedTo === 'Unassigned' || task.assignedTo === 'Open / Unassigned' ? (
+                        <button
+                          onClick={() => handleClaimMission(task)}
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 group/btn uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/30"
+                        >
+                          <User size={16} /> Claim Mission
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setSelectedTaskForProof(task)}
+                          className="w-full bg-theme-base transition-colors duration-300 hover:bg-theme-text text-theme-text opacity-70 hover:opacity-100 hover:text-theme-base font-black py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 border border-slate-200/10 hover:border-transparent group/btn uppercase tracking-widest text-[10px]"
+                        >
+                          <Camera size={16} className="text-theme-primary group-hover/btn:text-theme-base" /> Initiate Verification
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
