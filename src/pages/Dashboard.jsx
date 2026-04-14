@@ -109,6 +109,16 @@ export default function Dashboard() {
     } catch (err) { console.error(err); } finally { setIsUploading(false); }
   };
 
+  const handleDeleteWork = async (id) => {
+    if (window.confirm("Are you sure you want to delete this gallery item?")) {
+      try {
+        await deleteDoc(doc(db, 'recentWork', id));
+      } catch (err) {
+        console.error("Error deleting work:", err);
+      }
+    }
+  };
+
   // 🤖 THE FIXED AI LOGIC
   const generateStrategy = async () => {
     if (!messages.length) return;
@@ -279,6 +289,30 @@ export default function Dashboard() {
           <input id="workImageInput" type="file" accept="image/*" required onChange={e => setWorkFile(e.target.files[0])} className="text-xs p-2" />
           <button type="submit" disabled={isUploading} className="bg-slate-900 text-white font-bold rounded-xl">{isUploading ? '...' : 'Publish'}</button>
         </form>
+
+        {/* Gallery Grid */}
+        {recentWork.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mt-8">
+            {recentWork.map(work => (
+              <div key={work.id} className="bg-theme-base rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative group">
+                <img src={work.imageUrl} alt={work.title} className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" />
+                <div className="p-4">
+                  <h3 className="font-bold text-theme-text text-sm">{work.title}</h3>
+                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">{work.description}</p>
+                </div>
+                
+                {/* Delete Button */}
+                <button 
+                  onClick={() => handleDeleteWork(work.id)}
+                  className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm p-2 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-all opacity-0 group-hover:opacity-100 shadow-sm"
+                  title="Delete Item"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
