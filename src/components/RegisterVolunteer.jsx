@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { User, MapPin, Mail, Sparkles, CheckCircle, Lock } from 'lucide-react';

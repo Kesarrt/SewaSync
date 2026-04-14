@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import MainLayout from './layouts/MainLayout'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from './firebase'
@@ -47,7 +47,7 @@ function App() {
         <Route path="/join" element={<RegisterVolunteer />} />
 
         {/* Redirect root domain */}
-        <Route path="/" element={<Navigate to="/public" replace />} />
+        <Route index element={<Navigate to="/public" replace />} />
 
         {/* Protected Volunteer Route */}
         <Route path="/volunteer" element={

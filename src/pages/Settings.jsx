@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Palette, Shield, User, LogOut, CheckCircle } from 'lucide-react';
-import { updateProfile, sendPasswordResetEmail, signOut } from 'firebase/auth';
+import { updateProfile, sendPasswordResetEmail, signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,10 +14,13 @@ export default function Settings() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (auth.currentUser) {
-      setDisplayName(auth.currentUser.displayName || '');
-    }
-  }, [auth.currentUser]);
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setDisplayName(user.displayName || '');
+      }
+    });
+    return () => unsub();
+  }, []);
 
   // Themes list
   const themes = [

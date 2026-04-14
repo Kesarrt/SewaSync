@@ -8,6 +8,19 @@ import {
 } from 'recharts';
 import { Target, Users, Award, Activity, PieChart as PieIcon, MapPin, TrendingUp } from 'lucide-react';
 
+// Reusable custom tooltip wrapper for matching themes
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-theme-surface bg-opacity-95 p-4 rounded-xl shadow-xl border border-slate-200/10 backdrop-blur-sm">
+        <p className="font-bold text-theme-text text-sm mb-1">{label || payload[0].name}</p>
+        <p className="text-theme-primary font-black text-lg">{payload[0].value}</p>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function Analytics() {
   const [tasks, setTasks] = useState([]);
   const [volunteers, setVolunteers] = useState([]);
@@ -80,19 +93,6 @@ export default function Analytics() {
     });
     return Object.keys(dates).map(date => ({ date, Missions: dates[date] }));
   }, [tasks]);
-
-  // Reusable custom tooltip wrapper for matching themes
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-theme-surface bg-opacity-95 p-4 rounded-xl shadow-xl border border-slate-200/10 backdrop-blur-sm">
-          <p className="font-bold text-theme-text text-sm mb-1">{label || payload[0].name}</p>
-          <p className="text-theme-primary font-black text-lg">{payload[0].value}</p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto bg-theme-base transition-colors duration-300 min-h-screen text-left rounded-[2.5rem]">

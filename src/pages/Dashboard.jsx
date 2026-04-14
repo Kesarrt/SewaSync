@@ -127,7 +127,7 @@ export default function Dashboard() {
     if (now - lastRequestTime < 5000) return;
     setLastRequestTime(now);
 
-    const makeRequest = async (isRetry = false) => {
+    const makeRequest = async () => {
       try {
         setIsGenerating(true);
         const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
