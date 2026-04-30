@@ -23,10 +23,10 @@ export default function Login() {
 
       // Traffic Cop: Fetch user roles
       const userDoc = await getDoc(doc(db, 'volunteers', user.uid));
-      
+
       if (userDoc.exists()) {
         const data = userDoc.data();
-        
+
         if (data.role === 'admin') {
           navigate('/admin');
         } else if (data.role === 'volunteer' && data.status === 'approved') {
@@ -42,7 +42,7 @@ export default function Login() {
         }
       } else {
         // Safe-fallback for an admin created before this collection structure
-        navigate('/admin'); 
+        navigate('/admin');
       }
     } catch (err) {
       console.error(err);
@@ -71,8 +71,8 @@ export default function Login() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
               <div className="relative">
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-theme-base transition-colors duration-300 border border-slate-200 rounded-xl outline-none focus:border-brand-teal focus:bg-theme-surface transition-colors duration-300 transition-colors"
@@ -86,8 +86,8 @@ export default function Login() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
               <div className="relative">
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-theme-base transition-colors duration-300 border border-slate-200 rounded-xl outline-none focus:border-brand-teal focus:bg-theme-surface transition-colors duration-300 transition-colors"
@@ -98,8 +98,8 @@ export default function Login() {
               </div>
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
               className="mt-2 w-full bg-brand-teal text-white font-medium py-3 rounded-xl hover:bg-teal-700 transition-colors shadow-md disabled:bg-slate-400"
             >
@@ -111,19 +111,19 @@ export default function Login() {
           <div className="mt-6 space-y-3">
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-800">
               <p className="font-semibold mb-1">Admin Demo Credentials</p>
-              <p>Email: <span className="font-medium">tandulkarkesar@gmail.com</span></p>
-              <p>Password: <span className="font-medium">kesartandulkar</span></p>
+              <p>Email:<span className="font-medium">tandulkarkesar@gmail.com</span></p>
+              <p>Password:<span className="font-medium">kesartandulkar</span></p>
             </div>
             <div className="bg-green-50 border border-green-100 rounded-lg p-3 text-sm text-green-800">
               <p className="font-semibold mb-1">Volunteer Demo Credentials</p>
-              <p>Email: <span className="font-medium">tandulkarkesar165@gmail.com</span></p>
-              <p>Password: <span className="font-medium">123456</span></p>
+              <p>Email:<span className="font-medium">tandulkarkesar165@gmail.com</span></p>
+              <p>Password:<span className="font-medium">123456</span></p>
             </div>
           </div>
 
           <div className="mt-6 text-center">
-            <button 
-              onClick={() => navigate('/public')} 
+            <button
+              onClick={() => navigate('/public')}
               className="text-sm text-slate-500 hover:text-brand-navy underline"
             >
               Return to Public Portal
