@@ -107,6 +107,20 @@ export default function Login() {
             </button>
           </form>
 
+          {/* Demo Credentials Box */}
+          <div className="mt-6 space-y-3">
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-800">
+              <p className="font-semibold mb-1">Admin Demo Credentials</p>
+              <p>Email: <span className="font-medium">tandulkarkesar@gmail.com</span></p>
+              <p>Password: <span className="font-medium">kesartandulkar</span></p>
+            </div>
+            <div className="bg-green-50 border border-green-100 rounded-lg p-3 text-sm text-green-800">
+              <p className="font-semibold mb-1">Volunteer Demo Credentials</p>
+              <p>Email: <span className="font-medium">tandulkarkesar165@gmail.com</span></p>
+              <p>Password: <span className="font-medium">123456</span></p>
+            </div>
+          </div>
+
           <div className="mt-6 text-center">
             <button 
               onClick={() => navigate('/public')} 
